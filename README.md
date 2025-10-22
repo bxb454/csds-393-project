@@ -8,6 +8,7 @@ Group Project for CSDS 393
     3. Update public/manifest.json as needed (if needed)
     4. Update vite.config.ts as needed (if needed)
     5. run ```bash
-        npm run build```
+        npm run build
+    ```
     6. go to build/ directory, go to chrome://extensions/
     7. Enable 'Developer Mode' and 'Load Unpacked' by selecting build/ directory.
