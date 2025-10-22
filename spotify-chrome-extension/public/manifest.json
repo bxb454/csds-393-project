@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Spotify Chrome Extension",
+  "version": "1.0.0",
+  "description": "CSDS 393 Group Project Chrome Extension",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": []
+}
