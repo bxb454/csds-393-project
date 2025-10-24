@@ -17,17 +17,16 @@ export function useAuth() {
 
   // Check for token in the URL after redirect
   useEffect(() => {
-    let token = window.localStorage.getItem('token')
+    let token = chrome.storage.local.get(['token'])
     if (token) {
-        setToken(token)
+        setToken(String(token))
     }
   }, [])
   
 const handleLogin = () => {
   const state = generateRandomString(16);
-
-  //get from current chrome extension environment
   const REDIRECT_URI = chrome.identity.getRedirectURL();
+  
   const params = new URLSearchParams({
     response_type: RESPONSE_TYPE,
     client_id: CLIENT_ID,
@@ -38,32 +37,54 @@ const handleLogin = () => {
 
   const authUrl = `${AUTH_ENDPOINT}?${params.toString()}`;
   
-  //use chrome built-in web auth flow
+  console.log("Auth URL: ", authUrl)
+  console.log("Redirect URI: ", REDIRECT_URI)
+  
   chrome.identity.launchWebAuthFlow(
     {
       url: authUrl,
       interactive: true,
     },
     (redirectUrl: string|undefined) => {
+      console.log("Callback fired!");
+      console.log("Redirect URL received: ", redirectUrl);
+      
+      if (chrome.runtime.lastError) {
+        console.error('Chrome identity error:', chrome.runtime.lastError);
+        return;
+      }
+      
       if (redirectUrl) {
-        const params = new URLSearchParams(
-          redirectUrl.split('#')[1] // Spotify returns token in hash
-        );
-        const token = params.get('access_token');
-        if (token) {
-          window.localStorage.setItem('token', token);
-          setToken(token);
+        console.log("Full redirect URL: ", redirectUrl);
+        
+        // Check if using 'code' flow
+        if (redirectUrl.includes('code=')) {
+          const urlParams = new URLSearchParams(redirectUrl.split('?')[1]);
+          console.log("Code: ", urlParams.get('code'));
         }
+        
+        // Check if using 'token' flow
+        if (redirectUrl.includes('#')) {
+          const params = new URLSearchParams(redirectUrl.split('#')[1]);
+          const token = params.get('access_token');
+          console.log("Access token: ", token);
+          
+          if (token) {
+            chrome.storage.local.set({ token: token });
+            setToken(token);
+            console.log("Token saved!");
+          }
+        }
+      } else {
+        console.log("No redirect URL received");
       }
     }
   );
-  console.log("Auth URL: ", authUrl)
-  console.log("Redirect URI: ", REDIRECT_URI)
 }
 
   const handleLogout = () => {
     setToken(null)
-    window.localStorage.removeItem('token')
+    chrome.storage.local.remove(['token'])
   }
     return { token, handleLogin, handleLogout }
 }
