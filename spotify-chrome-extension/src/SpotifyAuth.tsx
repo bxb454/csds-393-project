@@ -33,7 +33,7 @@ async function exchangeCodeForToken(
   code: string, 
   codeVerifier: string, 
   redirectUri: string
-): Promise<string | null> {
+): Promise<{access_token: string, refresh_token: string} | null> {
   const tokenParams = new URLSearchParams({
     client_id: CLIENT_ID,
     grant_type: 'authorization_code',
@@ -55,10 +55,13 @@ async function exchangeCodeForToken(
     const data = await response.json();
     console.log("Token response: ", data);
     
-    if (data.access_token) {
-      return data.access_token;
+    if (data.access_token && data.refresh_token) {
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token
+      };
     } else {
-      console.error("No access token in response:", data);
+      console.error("No tokens in response:", data);
       return null;
     }
   } catch (error) {
@@ -66,22 +69,79 @@ async function exchangeCodeForToken(
     return null;
   }
 }
+
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  const tokenParams = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+  });
+  
+  try {
+    console.log("Refreshing access token...");
+    const response = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: tokenParams.toString(),
+    });
+    
+    const data = await response.json();
+    console.log("Refresh token response: ", data);
+    
+    if (data.access_token) {
+      return data.access_token;
+    } else {
+      console.error("No access token in refresh response:", data);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    return null;
+  }
+}
+
 export function useAuth() {
   const [token, setToken] = useState<string | null>(null)
 
   // Check for token in the URL after redirect
-  useEffect(() => {
-    chrome.storage.local.get(['token'], (result) => {
-      console.log("Loaded token from storage:", result.token);
-      if (result.token) {
-        setToken(result.token)
+ useEffect(() => {
+  chrome.storage.local.get(['token', 'refresh_token', 'token_expiry'], async (result) => {
+    console.log("Loaded from storage:", result);
+    
+    if (result.token && result.refresh_token) {
+      const now = Date.now();
+      const expiry = result.token_expiry || 0;
+      
+      // If token is expired or about to expire (within 5 minutes)
+      if (now >= expiry - 5 * 60 * 1000) {
+        console.log("Token expired, refreshing...");
+        const newToken = await refreshAccessToken(result.refresh_token);
+        
+        if (newToken) {
+          const newExpiry = Date.now() + 3600 * 1000;
+          await chrome.storage.local.set({ 
+            token: newToken,
+            token_expiry: newExpiry
+          });
+          setToken(newToken);
+        } else {
+          // Refresh failed, require re-login
+          await chrome.storage.local.remove(['token', 'refresh_token', 'token_expiry']);
+          setToken(null);
+        }
       } else {
-        setToken(null)  // Important: explicitly set to null if no token
+        // Token is still valid
+        setToken(result.token);
       }
-    })
-  }, [])
+    } else {
+      setToken(null);
+    }
+  })
+}, [])
   
-  const handleLogin = async () => {
+const handleLogin = async () => {
     const state = generateRandomString(16);
     const codeVerifier = generateRandomString(64);
     
@@ -134,18 +194,23 @@ export function useAuth() {
               console.log("Code verifier retrieved:", codeVerifier);
               
               // USE THE NEW FUNCTION
-              const accessToken = await exchangeCodeForToken(
+                const tokens = await exchangeCodeForToken(
                 code, 
                 codeVerifier, 
                 chrome.identity.getRedirectURL()
-              );
-              
-              if (accessToken) {
-                await chrome.storage.local.set({ token: accessToken });
+                );
+
+                if (tokens) {
+                const expiry = Date.now() + 3600 * 1000; // 1 hour from now
+                await chrome.storage.local.set({ 
+                    token: tokens.access_token,
+                    refresh_token: tokens.refresh_token,
+                    token_expiry: expiry
+                });
                 await chrome.storage.local.remove('code_verifier');
-                setToken(accessToken);
-                console.log("Token saved and state updated!");
-              }
+                setToken(tokens.access_token);
+                console.log("Tokens saved and state updated!");
+                }
             });
           }
         } else {

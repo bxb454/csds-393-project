@@ -33,6 +33,7 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
+
   if (!token) {
     return (<div className = "App">
       <LoginPage handleLogin={handleLogin} />
