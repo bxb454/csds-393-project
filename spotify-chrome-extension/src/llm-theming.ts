@@ -18,7 +18,7 @@ export const LLMTheming = {
     //we depend on OAuth token for this
     const token = await AuthController.getAccessToken();
     const names: string[] = [];
-    let url = `${SPOTIFY_BASE_URL}/me/playlists?limit=50`;
+    let url = `${SPOTIFY_BASE_URL}/me/playlists?offset=0&limit=50`;
     while (url) {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw Errors.make("SPOTIFY_ERROR", `GET ${url} failed`);
