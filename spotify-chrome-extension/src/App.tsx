@@ -16,8 +16,8 @@ function HomePage({ token, handleLogout }: { token: string, handleLogout: () => 
       <h1>Welcome to Spotify App</h1>
       <p>You're logged in!</p>
       <p>Access token: <code>{token.slice(0,5)}..{token.slice(-4)}</code></p>
-      <p>Current track ID: <code>{track_id}</code></p>
-      <p>Current track name: <code>{track_name}</code></p>
+      <p>Current track ID: <code>{track_id ?? "None playing"}</code></p>
+      <p>Current track name: <code>{track_name ?? "None playing"}</code></p>
       <button onClick={handleLogout}>Logout</button>
     </div>
   )
