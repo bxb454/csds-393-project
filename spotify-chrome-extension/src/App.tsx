@@ -1,11 +1,22 @@
-import { useAuth } from './Auth.tsx'
+import { useAuth } from './SpotifyAuth.tsx'
+import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 
 function HomePage({ token, handleLogout }: { token: string, handleLogout: () => void }) {
+  let t_id = null
+  let t_name = null
+  getCurrentlyPlayingTrack(token).then(current_track => {
+    t_id = current_track.data.item.id
+    getTrackDetails(token, t_id).then(track => {
+      t_name = track.data.name
+    })
+  })
   return (
     <div>
       <h1>Welcome to Spotify App</h1>
       <p>You're logged in!</p>
       <p>Access token: <code>{token}</code></p>
+      <p>Current track ID: <code>{t_id}</code></p>
+      <p>Current track name: <code>{t_name}</code></p>
       <button onClick={handleLogout}>Logout</button>
     </div>
   )
