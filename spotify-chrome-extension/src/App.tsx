@@ -22,16 +22,18 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
-
-  return (
-    <div className="App">
-      {!token ? (
-        <LoginPage handleLogin={handleLogin} />
-      ) : (
+  if (!token) {
+    return (<div className = "App">
+      <LoginPage handleLogin={handleLogin} />
+    </div>)
+  }
+  else {
+    return (
+      <div className="App">
         <HomePage token={token} handleLogout={handleLogout} />
-      )}
-    </div>
-  )
+      </div>
+    )
+  }
 }
 
 export default App
