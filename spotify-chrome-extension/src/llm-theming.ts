@@ -1,7 +1,15 @@
 import { LlmClient, type GenerateThemeRequest, type GeneratedTheme } from "./llm";
 import { AuthController } from "./auth-controller";   
 import { applyTheme } from "./theme-updater";         
-import * as Errors from "./errors";                   
+
+//Don't put it in its own file. Just leave it here for now to resolve the import error.
+const Errors = {
+  make: (code: string, message: string) => {
+    const err = new Error(message) as Error & { code?: string };
+    err.code = code;
+    return err;
+  }
+};
 
 //this never changes
 const SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
