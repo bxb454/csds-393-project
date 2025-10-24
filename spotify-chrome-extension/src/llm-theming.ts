@@ -1,5 +1,4 @@
-import { LlmClient, type GenerateThemeRequest, type GeneratedTheme } from "./llm";
-import { AuthController } from "./auth-controller";   
+import { LlmClient, type GenerateThemeRequest, type GeneratedTheme } from "./llm";  
 import { applyTheme } from "./theme-updater";         
 
 //Don't put it in its own file. Just leave it here for now to resolve the import error.
@@ -14,6 +13,13 @@ const Errors = {
 //this never changes
 const SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
 
+//helper function to get to localStorage like Auth.tsx does
+function getAccessToken(): string {
+  const token = window.localStorage.getItem('token');
+  if (!token) throw Errors.make("AUTH_REQUIRED", "Spotify login required");
+  return token;
+}
+
 export const LLMTheming = {
   client: new LlmClient(),
 
@@ -21,10 +27,10 @@ export const LLMTheming = {
 
   //use promises for cleaner async/await operations for defined state
 
-  // 4.4.1 — LLMTheming owns playlist/album helpers and uses AuthController for Spotify
+  // 4.4.1 as specified in the SDD. LLMTheming owns playlist/album helpers and uses AuthController for Spotify
   async listPlaylists(): Promise<string[]> {
     //we depend on OAuth token for this
-    const token = await AuthController.getAccessToken();
+    const token = getAccessToken();
     const names: string[] = [];
     let url = `${SPOTIFY_BASE_URL}/me/playlists?offset=0&limit=50`;
     while (url) {
@@ -39,7 +45,7 @@ export const LLMTheming = {
 
   //same thing here for promises
   async getPlaylistArt(name: string): Promise<string | null> {
-    const token = await AuthController.getAccessToken();
+    const token = getAccessToken();
     let url = `${SPOTIFY_BASE_URL}/me/playlists?limit=50`;
     while (url) {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -53,7 +59,7 @@ export const LLMTheming = {
   },
 
   async findAlbum(name: string): Promise<string | null> {
-    const token = await AuthController.getAccessToken();
+    const token = getAccessToken();
     const res = await fetch(`${SPOTIFY_BASE_URL}/search?` + new URLSearchParams({
       q: `album:${name}`, type: "album", limit: "1"
     }), { headers: { Authorization: `Bearer ${token}` } });
