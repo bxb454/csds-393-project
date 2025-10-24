@@ -71,10 +71,14 @@ export function useAuth() {
 
   // Check for token in the URL after redirect
   useEffect(() => {
-    let token = chrome.storage.local.get(['token'])
-    if (token) {
-        setToken(String(token))
-    }
+    chrome.storage.local.get(['token'], (result) => {
+      console.log("Loaded token from storage:", result.token);
+      if (result.token) {
+        setToken(result.token)
+      } else {
+        setToken(null)  // Important: explicitly set to null if no token
+      }
+    })
   }, [])
   
   const handleLogin = async () => {
