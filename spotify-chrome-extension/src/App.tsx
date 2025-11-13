@@ -3,7 +3,8 @@ import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import './App.css'
 
-function HomePage({ token, handleLogout }: { token: string, handleLogout: () => void }) {
+// HomePage now accepts a navigation handler (goToSettings)
+function HomePage({ token, handleLogout, goToSettings }: { token: string, handleLogout: () => void, goToSettings: () => void }) {
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
@@ -16,11 +17,11 @@ function HomePage({ token, handleLogout }: { token: string, handleLogout: () => 
       set_track_name(track.data.name)
     })
   })
-  // This JSX structure is correct for the desired layout
 return (
   <div className="homepage-container">
     <div className="top-bar">
-      <button className="nav-button left">Settings</button>
+      {/* Settings button now uses the navigation handler */}
+      <button className="nav-button left" onClick={goToSettings}>Settings</button>
       <button className="nav-button center">LLM-Theming</button>
       <button className="nav-button right" onClick={handleLogout}>Logout</button>
     </div>
@@ -43,6 +44,23 @@ return (
 );
 }
 
+// SettingsPage now accepts a navigation handler (goToHome)
+function SettingsPage({ goToHome }: { goToHome: () => void }) {
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        {/* New "Accept" button to return to HomePage */}
+        <button className="nav-button left" onClick={goToHome}>Accept</button>
+        <button className="nav-button center">Settings</button>
+        <button className="nav-button right" onClick={goToHome}>Close</button> 
+      </div>
+      <div>
+        {/* settings code goes here in a future update*/}
+      </div>
+    </div>
+  )
+}
+
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   return (
     <div>
@@ -54,6 +72,11 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
+  // Add state to control which screen is currently visible
+  const [currentView, setCurrentView] = useState('home');
+
+  const goToSettings = () => setCurrentView('settings');
+  const goToHome = () => setCurrentView('home');
 
   if (!token) {
     return (<div className = "App">
@@ -61,9 +84,19 @@ function App() {
     </div>)
   }
   else {
+    // Render SettingsPage if currentView is 'settings'
+    if (currentView === 'settings') {
+      return (
+        <div className="App">
+          <SettingsPage goToHome={goToHome} />
+        </div>
+      )
+    }
+    
+    // Default: Render HomePage
     return (
       <div className="App">
-        <HomePage token={token} handleLogout={handleLogout} />
+        <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} />
       </div>
     )
   }
