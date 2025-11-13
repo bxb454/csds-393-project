@@ -1,26 +1,46 @@
 import { useState } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
+import './App.css'
 
 function HomePage({ token, handleLogout }: { token: string, handleLogout: () => void }) {
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
+  const [artist_Name, set_artist_name] = useState<string | null>(null)
+  const [album_Art, set_album_art] = useState<string | null>(null)
   getCurrentlyPlayingTrack(token).then(current_track => {
     set_track_id(current_track.data.item.id)
+    set_album_art(current_track.data.item.album.images[0].url)
+    set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "))
     getTrackDetails(token, track_id as string).then(track => {
       set_track_name(track.data.name)
     })
   })
-  return (
-    <div>
-      <h1>Welcome to Spotify App</h1>
-      <p>You're logged in!</p>
-      <p>Access token: <code>{token.slice(0,5)}..{token.slice(-4)}</code></p>
-      <p>Current track ID: <code>{track_id ?? "None playing"}</code></p>
-      <p>Current track name: <code>{track_name ?? "None playing"}</code></p>
-      <button onClick={handleLogout}>Logout</button>
+  // This JSX structure is correct for the desired layout
+return (
+  <div className="homepage-container">
+    <div className="top-bar">
+      <button className="nav-button left">Settings</button>
+      <button className="nav-button center">LLM-Theming</button>
+      <button className="nav-button right" onClick={handleLogout}>Logout</button>
     </div>
-  )
+
+    <div className="player-card">
+      <div className="album-section">
+        {album_Art ? (
+          <img src={album_Art} alt="Album Art" className="album-art" />
+        ) : (
+          <div className="album-placeholder">Album Art</div>
+        )}
+      </div>
+
+      <div className="track-section">
+        <h2 className="track-name">{track_name ?? "Track name"}</h2>
+        <p className="artist-name">{artist_Name ?? "Artist name"}</p>
+      </div>
+    </div>
+  </div>
+);
 }
 
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
