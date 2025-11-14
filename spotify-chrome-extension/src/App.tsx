@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
-import { ThemeUpdater, type TrackMetadata } from './theme/Theme'
-import { LLMTheming } from './llm-theming'
-import { SettingsProvider, useSettings } from './SettingsContext.tsx'
 import './App.css'
 
 
@@ -54,14 +51,14 @@ return (
       <button className="nav-button right" onClick={handleLogout}>Logout</button>
     </div>
 
-      <div className="player-card">
-        <div className="album-section">
-          {album_Art ? (
-            <img src={album_Art} alt="Album Art" className="album-art" />
-          ) : (
-            <div className="album-placeholder">Album Art</div>
-          )}
-        </div>
+    <div className="player-card">
+      <div className="album-section">
+        {album_Art ? (
+          <img src={album_Art} alt="Album Art" className="album-art" />
+        ) : (
+          <div className="album-placeholder">Album Art</div>
+        )}
+      </div>
 
       <div className="track-section">
         <h2 className="track-name">{track_name ?? "Track name"}</h2>
@@ -109,45 +106,6 @@ function LLMPage({ goToHome }: { goToHome: () => void }) {
   );
 }
 
-// SettingsPage now accepts a navigation handler (goToHome)
-function SettingsPage({ goToHome }: { goToHome: () => void }) {
-  const { liveThemes, setLiveThemes, weatherThemes, setWeatherThemes } = useSettings();
-
-  return (
-    <div className="homepage-container">
-      <div className="top-bar">
-        <button className="nav-button left" onClick={goToHome}>Accept</button>
-        <button className="nav-button center">Settings</button>
-        <button className="nav-button right" onClick={goToHome}>Close</button> 
-      </div>
-      <div className="settings-content">
-        <div className="setting-row">
-          <span className="setting-label">Live Themes</span>
-          <label className="toggle-switch">
-            <input 
-              type="checkbox" 
-              checked={liveThemes} 
-              onChange={(e) => setLiveThemes(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-        <div className="setting-row">
-          <span className="setting-label">Weather Themes</span>
-          <label className="toggle-switch">
-            <input 
-              type="checkbox" 
-              checked={weatherThemes} 
-              onChange={(e) => setWeatherThemes(e.target.checked)}
-            />
-            <span className="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   return (
     <div>
@@ -157,7 +115,7 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   )
 }
 
-function AppContent() {
+function App() {
   const { token, handleLogin, handleLogout } = useAuth()
   // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
@@ -194,14 +152,6 @@ function AppContent() {
       </div>
     )
   }
-}
-
-function App() {
-  return (
-    <SettingsProvider>
-      <AppContent />
-    </SettingsProvider>
-  )
 }
 
 export default App
