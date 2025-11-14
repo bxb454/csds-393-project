@@ -7,12 +7,12 @@
     "dev": "vite",
     "dev:sandbox": "vite --open /theme-sandbox.html",
     "build": "tsc -b && vite build",
+    "transpile": "tsc ./src/theme/Theme.ts --target ES2020 --module none --outDir ./src/theme",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "vite-plugin-static-copy": "^3.1.4"

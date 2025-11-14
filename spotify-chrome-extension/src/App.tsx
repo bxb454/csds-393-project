@@ -6,86 +6,53 @@ import { LLMTheming } from './llm-theming'
 import { SettingsProvider, useSettings } from './SettingsContext.tsx'
 import './App.css'
 
-LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY || '');
+
+function sendThemeAction(action: "applyRandomTheme" | "applyPlaylistTheme" | "resetTheme", setStatus: (msg: string) => void) {
+    if (!chrome?.tabs) {
+      setStatus("Chrome tabs API unavailable.");
+      return;
+    }
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs[0]?.id;
+      if (!tabId) {
+        setStatus("No active tab.");
+        return;
+      }
+      chrome.tabs.sendMessage(tabId, { action }, (response) => {
+        if (chrome.runtime.lastError) {
+          setStatus(chrome.runtime.lastError.message ?? "Unknown error.");
+          return;
+        }
+        setStatus(response?.status ?? "No response.");
+      });
+    });
+  }
 
 // HomePage now accepts a navigation handler (goToSettings)
-function HomePage({ token, handleLogout, goToSettings }: { token: string, handleLogout: () => void, goToSettings: () => void }) {
+function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: string, handleLogout: () => void, goToSettings: () => void, goToLLM: () => void }) {
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
-  const [isGeneratingTheme, setIsGeneratingTheme] = useState(false)
-  
-  const { liveThemes } = useSettings();
+  //const [themeStatus, setThemeStatus] = useState<string>("");
 
-  // Function to fetch current track
-  const fetchCurrentTrack = async () => {
-    try {
-      const current_track = await getCurrentlyPlayingTrack(token);
-      const newTrackId = current_track.data.item.id;
-      
-      // Only update if track changed
-      if (newTrackId !== track_id) {
-        const albumArt = current_track.data.item.album.images[0]?.url;
-        const artists = current_track.data.item.artists.map((artist: { name: string }) => artist.name);
-        const albumName = current_track.data.item.album.name;
-        
-        set_track_id(newTrackId);
-        set_album_art(albumArt);
-        set_artist_name(artists.join(", "));
-        
-        const track = await getTrackDetails(token, newTrackId);
-        const trackName = track.data.name;
-        set_track_name(trackName);
 
-        // If Live Themes is enabled, generate and apply theme
-        if (liveThemes && !isGeneratingTheme) {
-          setIsGeneratingTheme(true);
-          try {
-            const metadata: TrackMetadata = {
-              id: newTrackId,
-              name: trackName,
-              artists: artists,
-              albumArt: albumArt,
-              albumName: albumName,
-              genres: [] // You can fetch genres from Spotify API if available
-            };
-            
-            console.log('Generating theme for track:', metadata);
-            const theme = await ThemeUpdater.generateThemeFromTrack(metadata);
-            ThemeUpdater.applyTheme(theme);
-            console.log('Theme applied successfully');
-          } catch (error) {
-            console.error('Error generating theme:', error);
-          } finally {
-            setIsGeneratingTheme(false);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching current track:", error);
-    }
-  };
-
-  // useEffect to set up polling
-  useEffect(() => {
-    // Fetch immediately on mount
-    fetchCurrentTrack();
-
-    // Set up interval to fetch every 3 seconds
-    const intervalId = setInterval(fetchCurrentTrack, 3000);
-
-    // Cleanup interval on unmount
-    return () => clearInterval(intervalId);
-  }, [token, track_id, liveThemes]); // Re-run if token, track_id, or liveThemes changes
-
-  return (
-    <div className="homepage-container">
-      <div className="top-bar">
-        <button className="nav-button left" onClick={goToSettings}>Settings</button>
-        <button className="nav-button center">LLM-Theming</button>
-        <button className="nav-button right" onClick={handleLogout}>Logout</button>
-      </div>
+  getCurrentlyPlayingTrack(token).then(current_track => {
+    set_track_id(current_track.data.item.id)
+    set_album_art(current_track.data.item.album.images[0].url)
+    set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "))
+    getTrackDetails(token, track_id as string).then(track => {
+      set_track_name(track.data.name)
+    })
+  })
+return (
+  <div className="homepage-container">
+    <div className="top-bar">
+      {/* Settings button now uses the navigation handler */}
+      <button className="nav-button left" onClick={goToSettings}>Settings</button>
+      <button className="nav-button center" onClick={goToLLM}>LLM-Theming</button>
+      <button className="nav-button right" onClick={handleLogout}>Logout</button>
+    </div>
 
       <div className="player-card">
         <div className="album-section">
@@ -96,11 +63,47 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
           )}
         </div>
 
-        <div className="track-section">
-          <h2 className="track-name">{track_name ?? "Track name"}</h2>
-          <p className="artist-name">{artist_Name ?? "Artist name"}</p>
-          {isGeneratingTheme && <p style={{ fontSize: '0.7rem', color: '#aaa' }}>Generating theme...</p>}
-        </div>
+      <div className="track-section">
+        <h2 className="track-name">{track_name ?? "Track name"}</h2>
+        <p className="artist-name">{artist_Name ?? "Artist name"}</p>
+      </div>
+    </div>
+  </div>
+);
+}
+
+// SettingsPage now accepts a navigation handler (goToHome)
+function SettingsPage({ goToHome }: { goToHome: () => void }) {
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        {/* New "Accept" button to return to HomePage */}
+        <button className="nav-button left" onClick={goToHome}>Accept</button>
+        <button className="nav-button center">Settings</button>
+        <button className="nav-button right" onClick={goToHome}>Close</button> 
+      </div>
+      <div>
+        {/* settings code goes here in a future update*/}
+      </div>
+    </div>
+  )
+}
+
+function LLMPage({ goToHome }: { goToHome: () => void }) {
+  const [status, setStatus] = useState("");
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        <button className="nav-button left" onClick={goToHome}>Back</button>
+        <button className="nav-button center">LLM-Theming</button>
+        <button className="nav-button right" onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset</button>
+      </div>
+      <div className="theme-actions">
+        {/* Buttons to trigger theme actions */}
+        <button onClick={() => sendThemeAction("applyRandomTheme", setStatus)}>Generate Random Theme</button>
+        <button onClick={() => sendThemeAction("applyPlaylistTheme", setStatus)}>Generate Playlist Theme</button>
+        <button onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset Theme</button>
+        <p>{status}</p>
       </div>
     </div>
   );
@@ -156,7 +159,9 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function AppContent() {
   const { token, handleLogin, handleLogout } = useAuth()
+  // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
+  const goToLLM = () => setCurrentView('llm');
 
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
@@ -167,17 +172,25 @@ function AppContent() {
     </div>)
   }
   else {
+    // Render SettingsPage if currentView is 'settings'
     if (currentView === 'settings') {
       return (
         <div className="App">
           <SettingsPage goToHome={goToHome} />
         </div>
       )
+    } // Render LLMPage if currentView is 'llm'
+    if (currentView === 'llm') {
+      return (
+      <div className="App">
+        <LLMPage goToHome={goToHome} />
+      </div>
+      )
     }
-    
+    // Default: Render HomePage
     return (
       <div className="App">
-        <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} />
+        <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} goToLLM={goToLLM} />
       </div>
     )
   }
