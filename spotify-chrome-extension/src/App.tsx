@@ -151,6 +151,26 @@ function SettingsPage({ goToHome }: { goToHome: () => void }) {
   )
 }
 
+function LLMPage({ goToHome }: { goToHome: () => void }) {
+  const [status, setStatus] = useState("");
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        <button className="nav-button left" onClick={goToHome}>Back</button>
+        <button className="nav-button center">LLM-Theming</button>
+        <button className="nav-button right" onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset</button>
+      </div>
+      <div className="theme-actions">
+        {/* Buttons to trigger theme actions */}
+        <button onClick={() => sendThemeAction("applyRandomTheme", setStatus)}>Generate Random Theme</button>
+        <button onClick={() => sendThemeAction("applyPlaylistTheme", setStatus)}>Generate Playlist Theme</button>
+        <button onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset Theme</button>
+        <p>{status}</p>
+      </div>
+    </div>
+  );
+}
+
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   return (
     <div>
@@ -168,6 +188,12 @@ function App() {
 
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
+  // Add state to control which screen is currently visible
+  const [currentView, setCurrentView] = useState('home');
+  const goToLLM = () => setCurrentView('llm');
+
+  const goToSettings = () => setCurrentView('settings');
+  const goToHome = () => setCurrentView('home');
 
   if (!token) {
     return (<div className = "App">
@@ -175,6 +201,22 @@ function App() {
     </div>)
   }
   else {
+    // Render SettingsPage if currentView is 'settings'
+    if (currentView === 'settings') {
+      return (
+        <div className="App">
+          <SettingsPage goToHome={goToHome} />
+        </div>
+      )
+    } // Render LLMPage if currentView is 'llm'
+    if (currentView === 'llm') {
+      return (
+      <div className="App">
+        <LLMPage goToHome={goToHome} />
+      </div>
+      )
+    }
+    // Default: Render HomePage
     // Render SettingsPage if currentView is 'settings'
     if (currentView === 'settings') {
       return (

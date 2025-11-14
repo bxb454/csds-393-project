@@ -4,13 +4,17 @@ import { LLMTheming } from "../llm-theming";
 export interface TrackMetadata {
   id: string;
   name: string;
-  artists: string[];
-  albumArt?: string;
-  albumName?: string;
-  playlistName?: string;
+  artists: { name: string }[];
+  album: {
+    id: string;
+    name: string;
+    images: { url?: string; height?: number; width?: number }[];
+  };
+  //optional 
   genres?: string[];
 }
 
+//mainly for testing purposes
 const GENRE_THEMES: Record<string, GeneratedTheme> = {
   rock: {
     colors: {
@@ -75,20 +79,7 @@ function saveOriginalStyles() {
 }
 
 async function findArt(meta: TrackMetadata): Promise<string | null> {
-  if (meta.albumArt) return meta.albumArt;
-
-  if (meta.albumName) {
-    const found = await LLMTheming.findAlbum(meta.albumName).catch(() => null);
-    if (found) return found;
-  }
-
-  if (meta.playlistName) {
-    const names = await LLMTheming.listPlaylists().catch(() => []);
-    if (names.some((n) => n.toLowerCase() === meta.playlistName!.toLowerCase())) {
-      const art = await LLMTheming.getPlaylistArt(meta.playlistName!).catch(() => null);
-      if (art) return art;
-    }
-  }
+  if (meta.album?.images?.[0]?.url) return meta.album.images[0].url;
 
   return await LLMTheming.getCurrentlyPlayingArt().catch(() => null);
 }

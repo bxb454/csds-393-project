@@ -2,96 +2,109 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ThemeUpdater = void 0;
 const llm_theming_1 = require("../llm-theming");
+
+//maybe jsdoc will work
+/**
+ * @typedef {Object} TrackMetadata
+ * @property {string} id
+ * @property {string} name
+ * @property {{ name: string }[]} artists
+ * @property {{ 
+ *   id: string,
+ *   name: string,
+ *   images: { url: string, height: number, width: number }[]
+ * }} album
+ * @property {string[]} [genres]
+ */
+
+//mainly for testing purposes
 const GENRE_THEMES = {
-    rock: {
-        colors: {
-            primary: { r: 220, g: 38, b: 38, a: 1 },
-            secondary: { r: 30, g: 30, b: 30, a: 1 },
-            accent: { r: 255, g: 193, b: 7, a: 1 },
-            background: { r: 18, g: 18, b: 18, a: 1 },
-            foreground: { r: 255, g: 255, b: 255, a: 1 }
-        },
-        backgroundImageDataUrl: ""
-    },
-    jazz: {
-        colors: {
-            primary: { r: 79, g: 70, b: 229, a: 1 },
-            secondary: { r: 31, g: 41, b: 55, a: 1 },
-            accent: { r: 251, g: 191, b: 36, a: 1 },
-            background: { r: 17, g: 24, b: 39, a: 1 },
-            foreground: { r: 243, g: 244, b: 246, a: 1 }
-        },
-        backgroundImageDataUrl: ""
-    }
-};
-const DEFAULT_THEME = {
+  rock: {
     colors: {
-        primary: { r: 29, g: 185, b: 84, a: 1 },
-        secondary: { r: 25, g: 20, b: 20, a: 1 },
-        accent: { r: 29, g: 185, b: 84, a: 1 },
-        background: { r: 18, g: 18, b: 18, a: 1 },
-        foreground: { r: 255, g: 255, b: 255, a: 1 }
+      primary: { r: 220, g: 38, b: 38, a: 1 },
+      secondary: { r: 30, g: 30, b: 30, a: 1 },
+      accent: { r: 255, g: 193, b: 7, a: 1 },
+      background: { r: 18, g: 18, b: 18, a: 1 },
+      foreground: { r: 255, g: 255, b: 255, a: 1 },
     },
-    backgroundImageDataUrl: ""
+    backgroundImageDataUrl: "",
+  },
+  jazz: {
+    colors: {
+      primary: { r: 79, g: 70, b: 229, a: 1 },
+      secondary: { r: 31, g: 41, b: 55, a: 1 },
+      accent: { r: 251, g: 191, b: 36, a: 1 },
+      background: { r: 17, g: 24, b: 39, a: 1 },
+      foreground: { r: 243, g: 244, b: 246, a: 1 },
+    },
+    backgroundImageDataUrl: "",
+  },
 };
+
+const DEFAULT_THEME = {
+  colors: {
+    primary: { r: 29, g: 185, b: 84, a: 1 },
+    secondary: { r: 25, g: 20, b: 20, a: 1 },
+    accent: { r: 29, g: 185, b: 84, a: 1 },
+    background: { r: 18, g: 18, b: 18, a: 1 },
+    foreground: { r: 255, g: 255, b: 255, a: 1 },
+  },
+  backgroundImageDataUrl: "",
+};
+
 const COLOR_VARS = {
-    PRIMARY: "--theme-primary",
-    SECONDARY: "--theme-secondary",
-    ACCENT: "--theme-accent",
-    BACKGROUND: "--theme-background",
-    FOREGROUND: "--theme-foreground"
+  PRIMARY: "--theme-primary",
+  SECONDARY: "--theme-secondary",
+  ACCENT: "--theme-accent",
+  BACKGROUND: "--theme-background",
+  FOREGROUND: "--theme-foreground",
 };
+
 const BG_VAR = "--theme-bg-image";
+
 let savedValues = null;
 let savedTransition = "";
+
 function rgba({ r, g, b, a }) {
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
+
 function saveOriginalStyles() {
-    if (savedValues)
-        return;
-    const root = document.documentElement;
-    const computed = getComputedStyle(root);
-    savedValues = {};
-    for (const key of Object.values(COLOR_VARS)) {
-        savedValues[key] = computed.getPropertyValue(key).trim();
-    }
-    savedValues[BG_VAR] = computed.getPropertyValue(BG_VAR).trim();
-    savedTransition = root.style.transition || "";
+  if (savedValues) return;
+  const root = document.documentElement;
+  const computed = getComputedStyle(root);
+  savedValues = {};
+  for (const key of Object.values(COLOR_VARS)) {
+    savedValues[key] = computed.getPropertyValue(key).trim();
+  }
+  savedValues[BG_VAR] = computed.getPropertyValue(BG_VAR).trim();
+  savedTransition = root.style.transition || "";
 }
+
 async function findArt(meta) {
-    if (meta.albumArt)
-        return meta.albumArt;
-    if (meta.albumName) {
-        const found = await llm_theming_1.LLMTheming.findAlbum(meta.albumName).catch(() => null);
-        if (found)
-            return found;
-    }
-    if (meta.playlistName) {
-        const names = await llm_theming_1.LLMTheming.listPlaylists().catch(() => []);
-        if (names.some((n) => n.toLowerCase() === meta.playlistName.toLowerCase())) {
-            const art = await llm_theming_1.LLMTheming.getPlaylistArt(meta.playlistName).catch(() => null);
-            if (art)
-                return art;
-        }
-    }
-    return await llm_theming_1.LLMTheming.getCurrentlyPlayingArt().catch(() => null);
+  if (meta.album?.images?.[0]?.url) return meta.album.images[0].url;
+
+  return await llm_theming_1.LLMTheming.getCurrentlyPlayingArt().catch(() => null);
 }
+
 const STYLE_ID = "llm-theme-injection";
+
 function ensureStyleTag() {
-    let tag = document.getElementById(STYLE_ID);
-    if (!tag) {
-        //inject style tag into the DOM
-        tag = document.createElement("style");
-        tag.id = STYLE_ID;
-        document.head.appendChild(tag);
-    }
-    return tag;
+  let tag = document.getElementById(STYLE_ID);
+  if (!tag) {
+    //inject style tag into the DOM
+    tag = document.createElement("style");
+    tag.id = STYLE_ID;
+    document.head.appendChild(tag);
+  }
+  return tag;
 }
+
 exports.ThemeUpdater = {
-    applyTheme(theme) {
-        saveOriginalStyles();
-        const css = `:root {
+  applyTheme(theme) {
+    saveOriginalStyles();
+
+    const css = `:root {
       ${COLOR_VARS.PRIMARY}: ${rgba(theme.colors.primary)};
       ${COLOR_VARS.SECONDARY}: ${rgba(theme.colors.secondary)};
       ${COLOR_VARS.ACCENT}: ${rgba(theme.colors.accent)};
@@ -113,41 +126,40 @@ exports.ThemeUpdater = {
       color: var(${COLOR_VARS.BACKGROUND}) !important;
   }
       `;
-        ensureStyleTag().textContent = css;
-        const root = document.documentElement;
-        if (theme.backgroundImageDataUrl) {
-            root.style.setProperty(BG_VAR, `url(${theme.backgroundImageDataUrl})`);
-        }
-        else {
-            root.style.removeProperty(BG_VAR);
-        }
-    },
-    async generateThemeFromTrack(meta) {
-        const artUrl = await findArt(meta);
-        if (artUrl) {
-            const response = await fetch(artUrl).catch(() => null);
-            if (response?.ok) {
-                const artBlob = await response.blob();
-                return llm_theming_1.LLMTheming.generateThemeFromAlbumArt(artBlob, { userContext: { genres: meta.genres ?? [] } });
-            }
-        }
-        if (meta.genres?.length) {
-            const genre = meta.genres[0].toLowerCase();
-            const preset = this.getThemeForGenre(genre);
-            if (preset) {
-                Object.entries(preset.colors).forEach(([key, varName]) => {
-                    console.log(`${JSON.stringify(key)} => ${JSON.stringify(varName)}`);
-                });
-                console.log(`Using preset theme for genre: ${genre}`);
-                return preset;
-            }
-        }
-        return llm_theming_1.LLMTheming.generateRandomTheme();
-    },
-    getThemeForGenre(genre) {
-        return GENRE_THEMES[genre.toLowerCase()] ?? null;
-    },
-    applyThemeTransition(theme1, theme2, duration) {
+    ensureStyleTag().textContent = css;
+
+    const root = document.documentElement;
+    if (theme.backgroundImageDataUrl) {
+      root.style.setProperty(BG_VAR, `url(${theme.backgroundImageDataUrl})`);
+    } else {
+      root.style.removeProperty(BG_VAR);
+    }
+  },
+
+  async generateThemeFromTrack(meta) {
+    const artUrl = await findArt(meta);
+    if (artUrl) {
+      const response = await fetch(artUrl).catch(() => null);
+      if (response?.ok) {
+        const artBlob = await response.blob();
+        return llm_theming_1.LLMTheming.generateThemeFromAlbumArt(artBlob, { userContext: { genres: meta.genres ?? [] } });
+      }
+    }
+    if (meta.genres?.length) {
+      const genre = meta.genres[0].toLowerCase();
+      const preset = this.getThemeForGenre(genre);
+      if (preset) {
+        return preset;
+      }
+    }
+    return llm_theming_1.LLMTheming.generateRandomTheme();
+  },
+
+  getThemeForGenre(genre) {
+    return GENRE_THEMES[genre.toLowerCase()] ?? null;
+  },
+
+  applyThemeTransition(theme1, theme2, duration) {
         saveOriginalStyles();
         const root = document.documentElement;
         const previous = savedTransition;
@@ -165,12 +177,13 @@ exports.ThemeUpdater = {
             }, duration);
         }, 0);
     },
-    resetToDefault() {
-        const styleTag = document.getElementById(STYLE_ID);
-        if (styleTag) {
-            styleTag.remove();
-        }
-        savedValues = null;
-        savedTransition = "";
+
+  resetToDefault() {
+    const styleTag = document.getElementById(STYLE_ID);
+    if (styleTag) {
+      styleTag.remove();
     }
+    savedValues = null;
+    savedTransition = "";
+  },
 };

@@ -9,9 +9,15 @@ LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY);
 const demoTrack: TrackMetadata = {
   id: "demo",
   name: "Demo Track",
-  artists: ["Demo Artist"],
+  artists: [{name: "Demo Artist"}],
   genres: ["jazz"],
-  albumArt: undefined
+  album: {
+    id: "demo-album",
+    name: "Demo Album",
+    images: [
+      { url: undefined }
+    ]
+  }
 };
 
 export function ThemeSandboxApp() {
