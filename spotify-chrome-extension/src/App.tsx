@@ -1,15 +1,22 @@
-import React, { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
+import { ThemeUpdater, type TrackMetadata } from './theme/Theme'
+import { LLMTheming } from './llm-theming'
+import { SettingsProvider, useSettings } from './SettingsContext.tsx'
 import './App.css'
 
-// HomePage now accepts a navigation handler (goToSettings)
+LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY || '');
+
 // HomePage now accepts a navigation handler (goToSettings)
 function HomePage({ token, handleLogout, goToSettings }: { token: string, handleLogout: () => void, goToSettings: () => void }) {
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
+  const [isGeneratingTheme, setIsGeneratingTheme] = useState(false)
+  
+  const { liveThemes } = useSettings();
 
   // Function to fetch current track
   const fetchCurrentTrack = async () => {
@@ -19,12 +26,41 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
       
       // Only update if track changed
       if (newTrackId !== track_id) {
+        const albumArt = current_track.data.item.album.images[0]?.url;
+        const artists = current_track.data.item.artists.map((artist: { name: string }) => artist.name);
+        const albumName = current_track.data.item.album.name;
+        
         set_track_id(newTrackId);
-        set_album_art(current_track.data.item.album.images[0].url);
-        set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "));
+        set_album_art(albumArt);
+        set_artist_name(artists.join(", "));
         
         const track = await getTrackDetails(token, newTrackId);
-        set_track_name(track.data.name);
+        const trackName = track.data.name;
+        set_track_name(trackName);
+
+        // If Live Themes is enabled, generate and apply theme
+        if (liveThemes && !isGeneratingTheme) {
+          setIsGeneratingTheme(true);
+          try {
+            const metadata: TrackMetadata = {
+              id: newTrackId,
+              name: trackName,
+              artists: artists,
+              albumArt: albumArt,
+              albumName: albumName,
+              genres: [] // You can fetch genres from Spotify API if available
+            };
+            
+            console.log('Generating theme for track:', metadata);
+            const theme = await ThemeUpdater.generateThemeFromTrack(metadata);
+            ThemeUpdater.applyTheme(theme);
+            console.log('Theme applied successfully');
+          } catch (error) {
+            console.error('Error generating theme:', error);
+          } finally {
+            setIsGeneratingTheme(false);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching current track:", error);
@@ -32,7 +68,7 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
   };
 
   // useEffect to set up polling
-  React.useEffect(() => {
+  useEffect(() => {
     // Fetch immediately on mount
     fetchCurrentTrack();
 
@@ -41,12 +77,11 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
-  }, [token, track_id]); // Re-run if token or track_id changes
+  }, [token, track_id, liveThemes]); // Re-run if token, track_id, or liveThemes changes
 
   return (
     <div className="homepage-container">
       <div className="top-bar">
-        {/* Settings button now uses the navigation handler */}
         <button className="nav-button left" onClick={goToSettings}>Settings</button>
         <button className="nav-button center">LLM-Theming</button>
         <button className="nav-button right" onClick={handleLogout}>Logout</button>
@@ -64,6 +99,7 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
         <div className="track-section">
           <h2 className="track-name">{track_name ?? "Track name"}</h2>
           <p className="artist-name">{artist_Name ?? "Artist name"}</p>
+          {isGeneratingTheme && <p style={{ fontSize: '0.7rem', color: '#aaa' }}>Generating theme...</p>}
         </div>
       </div>
     </div>
@@ -72,8 +108,7 @@ function HomePage({ token, handleLogout, goToSettings }: { token: string, handle
 
 // SettingsPage now accepts a navigation handler (goToHome)
 function SettingsPage({ goToHome }: { goToHome: () => void }) {
-  const [liveThemes, setLiveThemes] = useState(false);
-  const [weatherThemes, setWeatherThemes] = useState(false);
+  const { liveThemes, setLiveThemes, weatherThemes, setWeatherThemes } = useSettings();
 
   return (
     <div className="homepage-container">
@@ -119,9 +154,8 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   )
 }
 
-function App() {
+function AppContent() {
   const { token, handleLogin, handleLogout } = useAuth()
-  // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
 
   const goToSettings = () => setCurrentView('settings');
@@ -133,7 +167,6 @@ function App() {
     </div>)
   }
   else {
-    // Render SettingsPage if currentView is 'settings'
     if (currentView === 'settings') {
       return (
         <div className="App">
@@ -142,13 +175,20 @@ function App() {
       )
     }
     
-    // Default: Render HomePage
     return (
       <div className="App">
         <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} />
       </div>
     )
   }
+}
+
+function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
+  )
 }
 
 export default App
