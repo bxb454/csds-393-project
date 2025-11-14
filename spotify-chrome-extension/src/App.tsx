@@ -91,23 +91,6 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
 );
 }
 
-// SettingsPage now accepts a navigation handler (goToHome)
-function SettingsPage({ goToHome }: { goToHome: () => void }) {
-  return (
-    <div className="homepage-container">
-      <div className="top-bar">
-        {/* New "Accept" button to return to HomePage */}
-        <button className="nav-button left" onClick={goToHome}>Accept</button>
-        <button className="nav-button center">Settings</button>
-        <button className="nav-button right" onClick={goToHome}>Close</button> 
-      </div>
-      <div>
-        {/* settings code goes here in a future update*/}
-      </div>
-    </div>
-  )
-}
-
 function LLMPage({ goToHome }: { goToHome: () => void }) {
   const [status, setStatus] = useState("");
   return (
