@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: "./index.html",
-          themesandbox: "./src/theme-sandbox/theme-sandbox.html"
+          themesandbox: "./src/theme-sandbox/themeSandbox.tsx"
         }
       }
     },

@@ -60,10 +60,6 @@ body {
   background-color: #3a3a3a;
 }
 
-.settings-page {
-  
-}
-
 .login-button {
   font-size: 1.2rem;
   padding: 0.8rem 1.5rem;
@@ -124,4 +120,80 @@ body {
   font-size: calc(1.8rem * var(--player-scale));
   color: #ccc;
   line-height: 1; 
+}
+
+/* SETTINGS COMPONENTS: */
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0.5rem;
+  flex: 1;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.setting-label {
+  font-size: 0.9rem;
+  color: white;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 24px;
+  transition: background-color 0.3s;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #1DB954;
+  border-color: #1DB954;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-slider:hover {
+  background-color: #3a3a3a;
+}
+
+.toggle-switch input:checked + .toggle-slider:hover {
+  background-color: #1ed760;
 }

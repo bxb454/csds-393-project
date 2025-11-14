@@ -1,8 +1,8 @@
 import type {
   GenerateThemeRequest,
-  GenerateThemeResponse,
+  //GenerateThemeResponse,
   GeneratedTheme,
-  ApiError,
+  //ApiError,
 } from "./types";
 
 import { GoogleGenerativeAI, type GenerativeModel,
@@ -58,10 +58,10 @@ export class LlmClient {
   }
 
 
-  private ensureKey(): string {
+  /*private ensureKey(): string {
     if (!this.apiKey) throw new Error("Gemini API key not set. call setApiKey() first.");
     return this.apiKey;
-  }
+  }*/
 
    static buildPromptParts(req: GenerateThemeRequest): Part[] {
     const instructions = LlmClient.buildPrompt({
@@ -148,7 +148,7 @@ function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: s
 
 
 //convert data URL to inline image data (base64 encoded)
-function toImagePart(dataUrl: string) {
+/*function toImagePart(dataUrl: string) {
     //regex parsing to match a typical MIME type for data representation
   const match_data = dataUrl.match(/^data:(.+?);base64,/)?.[1] ?? "image/png";
   const data = dataUrl.split(",")[1]!;
@@ -172,4 +172,4 @@ function parseAndValidateTheme(text: string) {
     if (!theme?.colors?.[k]) throw new Error(`Missing colors.${k}`);
   }
   return theme;
-}
+}*/
