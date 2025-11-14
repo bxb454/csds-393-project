@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:sandbox": "vite --open /theme-sandbox.html",
     "build": "tsc -b && vite build",
+    "transpile": "tsc ./src/theme/Theme.ts --target ES2020 --module none --outDir ./src/theme",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest"
@@ -18,6 +19,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^14.0.0",
+    "@testing-library/user-event": "^14.4.3",
     "@types/chrome": "^0.1.24",
     "@types/node": "^24.6.0",
     "@types/react": "^19.1.16",
@@ -27,16 +31,12 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
+    "jsdom": "^22.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
     "vite": "^7.1.12",
-    "vitest": "^1.4.7",
-    "@testing-library/react": "^14.0.0",
-    "@testing-library/jest-dom": "^6.0.0",
-    "@testing-library/user-event": "^14.4.3",
-    "jsdom": "^22.0.0"
-  }
-  ,
+    "vitest": "^1.6.1"
+  },
   "vitest": {
     "test": {
       "globals": true,

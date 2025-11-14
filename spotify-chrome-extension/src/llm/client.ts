@@ -14,6 +14,7 @@ import { GoogleGenerativeAI, type GenerativeModel,
  * https://www.npmjs.com/package/@google/generative-ai
  */
 
+//This is a "factory" type that creates a GenerativeModel from an API key.
 export type ModelFactory = (apiKey: string) => GenerativeModel;
 
 export class LlmClient {
@@ -146,7 +147,7 @@ function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: s
 }
 */
 
-
+/* i dont need these anymore
 //convert data URL to inline image data (base64 encoded)
 function toImagePart(dataUrl: string) {
     //regex parsing to match a typical MIME type for data representation
@@ -172,4 +173,4 @@ function parseAndValidateTheme(text: string) {
     if (!theme?.colors?.[k]) throw new Error(`Missing colors.${k}`);
   }
   return theme;
-}
+  */
