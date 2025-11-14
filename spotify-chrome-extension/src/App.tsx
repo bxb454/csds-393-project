@@ -69,7 +69,7 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
       <div className="top-bar">
         {/* Settings button now uses the navigation handler */}
         <button className="nav-button left" onClick={goToSettings}>Settings</button>
-        <button className="nav-button center">LLM-Theming</button>
+        <button className="nav-button center" onClick={goToLLM}>LLM-Theming</button>
         <button className="nav-button right" onClick={handleLogout}>Logout</button>
       </div>
 
