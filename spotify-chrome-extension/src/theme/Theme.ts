@@ -34,7 +34,7 @@ const GENRE_THEMES: Record<string, GeneratedTheme> = {
   }
 };
 
-const DEFAULT_THEME: GeneratedTheme = {
+/*const DEFAULT_THEME: GeneratedTheme = {
   colors: {
     primary: { r: 29, g: 185, b: 84, a: 1 },
     secondary: { r: 25, g: 20, b: 20, a: 1 },
@@ -43,7 +43,7 @@ const DEFAULT_THEME: GeneratedTheme = {
     foreground: { r: 255, g: 255, b: 255, a: 1 }
   },
   backgroundImageDataUrl: ""
-};
+};*/
 
 const COLOR_VARS = {
     PRIMARY: "--theme-primary",

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import './App.css'
@@ -31,34 +31,56 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
-  //const [themeStatus, setThemeStatus] = useState<string>("");
 
+  // Function to fetch current track
+  const fetchCurrentTrack = async () => {
+    try {
+      const current_track = await getCurrentlyPlayingTrack(token);
+      const newTrackId = current_track.data.item.id;
+      
+      // Only update if track changed
+      if (newTrackId !== track_id) {
+        set_track_id(newTrackId);
+        set_album_art(current_track.data.item.album.images[0].url);
+        set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "));
+        
+        const track = await getTrackDetails(token, newTrackId);
+        set_track_name(track.data.name);
+      }
+    } catch (error) {
+      console.error("Error fetching current track:", error);
+    }
+  };
 
-  getCurrentlyPlayingTrack(token).then(current_track => {
-    set_track_id(current_track.data.item.id)
-    set_album_art(current_track.data.item.album.images[0].url)
-    set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "))
-    getTrackDetails(token, track_id as string).then(track => {
-      set_track_name(track.data.name)
-    })
-  })
-return (
-  <div className="homepage-container">
-    <div className="top-bar">
-      {/* Settings button now uses the navigation handler */}
-      <button className="nav-button left" onClick={goToSettings}>Settings</button>
-      <button className="nav-button center" onClick={goToLLM}>LLM-Theming</button>
-      <button className="nav-button right" onClick={handleLogout}>Logout</button>
-    </div>
+  // useEffect to set up polling
+  React.useEffect(() => {
+    // Fetch immediately on mount
+    fetchCurrentTrack();
 
-    <div className="player-card">
-      <div className="album-section">
-        {album_Art ? (
-          <img src={album_Art} alt="Album Art" className="album-art" />
-        ) : (
-          <div className="album-placeholder">Album Art</div>
-        )}
+    // Set up interval to fetch every 3 seconds
+    const intervalId = setInterval(fetchCurrentTrack, 3000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
+  }, [token, track_id]); // Re-run if token or track_id changes
+
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        {/* Settings button now uses the navigation handler */}
+        <button className="nav-button left" onClick={goToSettings}>Settings</button>
+        <button className="nav-button center">LLM-Theming</button>
+        <button className="nav-button right" onClick={handleLogout}>Logout</button>
       </div>
+
+      <div className="player-card">
+        <div className="album-section">
+          {album_Art ? (
+            <img src={album_Art} alt="Album Art" className="album-art" />
+          ) : (
+            <div className="album-placeholder">Album Art</div>
+          )}
+        </div>
 
       <div className="track-section">
         <h2 className="track-name">{track_name ?? "Track name"}</h2>
@@ -104,6 +126,46 @@ function LLMPage({ goToHome }: { goToHome: () => void }) {
       </div>
     </div>
   );
+}
+
+// SettingsPage now accepts a navigation handler (goToHome)
+function SettingsPage({ goToHome }: { goToHome: () => void }) {
+  const [liveThemes, setLiveThemes] = useState(false);
+  const [weatherThemes, setWeatherThemes] = useState(false);
+
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        <button className="nav-button left" onClick={goToHome}>Accept</button>
+        <button className="nav-button center">Settings</button>
+        <button className="nav-button right" onClick={goToHome}>Close</button> 
+      </div>
+      <div className="settings-content">
+        <div className="setting-row">
+          <span className="setting-label">Live Themes</span>
+          <label className="toggle-switch">
+            <input 
+              type="checkbox" 
+              checked={liveThemes} 
+              onChange={(e) => setLiveThemes(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+        <div className="setting-row">
+          <span className="setting-label">Weather Themes</span>
+          <label className="toggle-switch">
+            <input 
+              type="checkbox" 
+              checked={weatherThemes} 
+              onChange={(e) => setWeatherThemes(e.target.checked)}
+            />
+            <span className="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
