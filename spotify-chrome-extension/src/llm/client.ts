@@ -173,4 +173,4 @@ function parseAndValidateTheme(text: string) {
     if (!theme?.colors?.[k]) throw new Error(`Missing colors.${k}`);
   }
   return theme;
-  */
+}*/

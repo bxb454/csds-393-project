@@ -159,6 +159,25 @@ exports.ThemeUpdater = {
     return GENRE_THEMES[genre.toLowerCase()] ?? null;
   },
 
+  applyThemeTransition(theme1, theme2, duration) {
+        saveOriginalStyles();
+        const root = document.documentElement;
+        const previous = savedTransition;
+        root.style.transition = `all ${duration}ms ease-in-out`;
+        this.applyTheme(theme1);
+        window.setTimeout(() => {
+            this.applyTheme(theme2);
+            window.setTimeout(() => {
+                if (previous) {
+                    root.style.transition = previous;
+                }
+                else {
+                    root.style.removeProperty("transition");
+                }
+            }, duration);
+        }, 0);
+    },
+
   resetToDefault() {
     const styleTag = document.getElementById(STYLE_ID);
     if (styleTag) {
