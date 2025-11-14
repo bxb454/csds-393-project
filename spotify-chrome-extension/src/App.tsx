@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import './App.css'
@@ -31,42 +31,63 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
-  //const [themeStatus, setThemeStatus] = useState<string>("");
 
+  // Function to fetch and update track info
+  const updateTrackInfo = async () => {
+    try {
+      const current_track = await getCurrentlyPlayingTrack(token)
+      const newTrackId = current_track.data.item.id
+      
+      // Only update if track has changed
+      if (newTrackId !== track_id) {
+        set_track_id(newTrackId)
+        set_album_art(current_track.data.item.album.images[0].url)
+        set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "))
+        
+        const track = await getTrackDetails(token, newTrackId)
+        set_track_name(track.data.name)
+      }
+    } catch (error) {
+      console.error("Error fetching track info:", error)
+    }
+  }
 
-  getCurrentlyPlayingTrack(token).then(current_track => {
-    set_track_id(current_track.data.item.id)
-    set_album_art(current_track.data.item.album.images[0].url)
-    set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "))
-    getTrackDetails(token, track_id as string).then(track => {
-      set_track_name(track.data.name)
-    })
-  })
-return (
-  <div className="homepage-container">
-    <div className="top-bar">
-      {/* Settings button now uses the navigation handler */}
-      <button className="nav-button left" onClick={goToSettings}>Settings</button>
-      <button className="nav-button center" onClick={goToLLM}>LLM-Theming</button>
-      <button className="nav-button right" onClick={handleLogout}>Logout</button>
-    </div>
+  // Initial load and polling setup
+  useEffect(() => {
+    // Fetch immediately on mount
+    updateTrackInfo()
 
-    <div className="player-card">
-      <div className="album-section">
-        {album_Art ? (
-          <img src={album_Art} alt="Album Art" className="album-art" />
-        ) : (
-          <div className="album-placeholder">Album Art</div>
-        )}
+    // Set up polling every 5 seconds (adjust as needed)
+    const intervalId = setInterval(updateTrackInfo, 5000)
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId)
+  }, [token, track_id]) // Re-run if token or track_id changes
+
+  return (
+    <div className="homepage-container">
+      <div className="top-bar">
+        <button className="nav-button left" onClick={goToSettings}>Settings</button>
+        <button className="nav-button center" onClick={goToLLM}>LLM-Theming</button>
+        <button className="nav-button right" onClick={handleLogout}>Logout</button>
       </div>
 
-      <div className="track-section">
-        <h2 className="track-name">{track_name ?? "Track name"}</h2>
-        <p className="artist-name">{artist_Name ?? "Artist name"}</p>
+      <div className="player-card">
+        <div className="album-section">
+          {album_Art ? (
+            <img src={album_Art} alt="Album Art" className="album-art" />
+          ) : (
+            <div className="album-placeholder">Album Art</div>
+          )}
+        </div>
+
+        <div className="track-section">
+          <h2 className="track-name">{track_name ?? "Track name"}</h2>
+          <p className="artist-name">{artist_Name ?? "Artist name"}</p>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
 
 // SettingsPage now accepts a navigation handler (goToHome)
@@ -74,7 +95,6 @@ function SettingsPage({ goToHome }: { goToHome: () => void }) {
   return (
     <div className="homepage-container">
       <div className="top-bar">
-        {/* New "Accept" button to return to HomePage */}
         <button className="nav-button left" onClick={goToHome}>Accept</button>
         <button className="nav-button center">Settings</button>
         <button className="nav-button right" onClick={goToHome}>Close</button> 
@@ -96,7 +116,6 @@ function LLMPage({ goToHome }: { goToHome: () => void }) {
         <button className="nav-button right" onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset</button>
       </div>
       <div className="theme-actions">
-        {/* Buttons to trigger theme actions */}
         <button onClick={() => sendThemeAction("applyRandomTheme", setStatus)}>Generate Random Theme</button>
         <button onClick={() => sendThemeAction("applyPlaylistTheme", setStatus)}>Generate Playlist Theme</button>
         <button onClick={() => sendThemeAction("resetTheme", setStatus)}>Reset Theme</button>
@@ -117,10 +136,8 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
-  // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
   const goToLLM = () => setCurrentView('llm');
-
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
 
@@ -130,14 +147,13 @@ function App() {
     </div>)
   }
   else {
-    // Render SettingsPage if currentView is 'settings'
     if (currentView === 'settings') {
       return (
         <div className="App">
           <SettingsPage goToHome={goToHome} />
         </div>
       )
-    } // Render LLMPage if currentView is 'llm'
+    }
     if (currentView === 'llm') {
       return (
       <div className="App">
@@ -145,7 +161,6 @@ function App() {
       </div>
       )
     }
-    // Default: Render HomePage
     return (
       <div className="App">
         <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} goToLLM={goToLLM} />
