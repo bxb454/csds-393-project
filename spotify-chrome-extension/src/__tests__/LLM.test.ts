@@ -5,6 +5,11 @@ const capturedKeys: string[] = [];
 const capturedModelConfigs: any[] = [];
 const mockGenerateContent = vi.fn();
 
+/*
+NOTE: EACH TEST, WHERE APPLICABLE, USES "ZERO, ONE MANY" TEST PHILOSOPHY FOR UNIT TESTING.
+*/
+
+
 vi.mock("@google/generative-ai", () => {
   class MockGoogleGenerativeAI {
     key: string;
@@ -39,6 +44,8 @@ function makeTheme(): { theme: GeneratedTheme } {
   };
 }
 
+//just a mock implementation
+//make all optional with Partial so tests can override what they want
 function makeRequest(overrides: Partial<GenerateThemeRequest> = {}): GenerateThemeRequest {
   return {
     albumOrPlaylistName: "Random Theme",
@@ -48,12 +55,14 @@ function makeRequest(overrides: Partial<GenerateThemeRequest> = {}): GenerateThe
   };
 }
 
+//reset the mocks before each test
 beforeEach(() => {
   capturedKeys.length = 0;
   capturedModelConfigs.length = 0;
   mockGenerateContent.mockReset();
 });
 
+//Describe the test suite for initializing the LLM Client
 describe("Theme.Generate / LLM_C-Init", () => {
   it("uses the default Gemini model when no factory is provided", async () => {
     mockGenerateContent.mockResolvedValueOnce({ response: { text: () => JSON.stringify(makeTheme()) } });
@@ -69,6 +78,7 @@ describe("Theme.Generate / LLM_C-Init", () => {
   });
 });
 
+//Describe the test suite for generating LLM themes
 describe("Theme.Generate / LLM_C-GenerateTheme", () => {
   it("handles zero optional inputs", async () => {
     let capturedPayload: any;
@@ -78,7 +88,7 @@ describe("Theme.Generate / LLM_C-GenerateTheme", () => {
     });
 
     const client = new LlmClient();
-    client.setApiKey("k-zero");
+    client.setApiKey("key-zero");
     const result = await client.generateTheme(makeRequest());
 
     expect(result).toEqual(makeTheme());
@@ -94,7 +104,7 @@ describe("Theme.Generate / LLM_C-GenerateTheme", () => {
     });
 
     const client = new LlmClient();
-    client.setApiKey("k-one");
+    client.setApiKey("key-one");
     await client.generateTheme(
       makeRequest({
         albumOrPlaylistName: "Solo",
@@ -118,7 +128,7 @@ describe("Theme.Generate / LLM_C-GenerateTheme", () => {
     });
 
     const client = new LlmClient();
-    client.setApiKey("k-many");
+    client.setApiKey("key-many");
     await client.generateTheme(
       makeRequest({
         userContext: { genres: ["jazz", "funk", "soul"] }
