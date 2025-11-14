@@ -58,12 +58,12 @@ export class LlmClient {
     this.model = undefined;
   }
 
-
-  /*private ensureKey(): string {
+/*
+  private ensureKey(): string {
     if (!this.apiKey) throw new Error("Gemini API key not set. call setApiKey() first.");
     return this.apiKey;
-  }*/
-
+  }
+*/
    static buildPromptParts(req: GenerateThemeRequest): Part[] {
     const instructions = LlmClient.buildPrompt({
       albumOrPlaylistName: req.albumOrPlaylistName,

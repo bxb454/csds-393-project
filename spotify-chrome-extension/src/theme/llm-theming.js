@@ -27,14 +27,7 @@ const RANDOM_THEME : GeneratedTheme = {
 */
 //this never changes
 const SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
-/*
-//helper function to get to localStorage like Auth.tsx does
-function getAccessToken(): string {
-  const token = window.localStorage.getItem('token');
-  if (!token) throw Errors.make("AUTH_REQUIRED", "Spotify login required");
-  return token;
-}
-*/
+
 //use Chrome local storage, not local device storage now.
 //get first so we can actually use the spotify API
 async function getAccessToken() {
