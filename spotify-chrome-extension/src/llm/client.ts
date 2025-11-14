@@ -1,113 +1,121 @@
 import type {
   GenerateThemeRequest,
   GenerateThemeResponse,
+  GeneratedTheme,
   ApiError,
 } from "./types";
 
-/**
- * LlmClient talks directly to Gemini's ORIGINAL REST paths (server-side preferred).
- * - POST https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key=...
- * - POST https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:streamGenerateContent?key=...
- * - POST https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:embedContent?key=...
- *
- * NOTE: For security, call this from a backend/proxy. If you must call from the extension,
- *       store the API key securely and understand the risk.
- */
-export class LlmClient {
-  private apiKey: string | null;
-  private model: string;
-  //BASE URL as shown in REST-style requests from gemini's API documentation
-  private base = "https://generativelanguage.googleapis.com/v1beta/models";
+import { GoogleGenerativeAI, type GenerativeModel,
+  type Part} from "@google/generative-ai";
 
-  constructor(opts?: { apiKey?: string; model?: string }) {
-    this.apiKey = opts?.apiKey ?? null;
-    //use 2.5 flash for balanced model
-    this.model = "gemini-2.5-flash";
+
+/**
+ * LlmClient talks directly to Gemini's ORIGINAL REST paths using the GenAI Typescript SDK found here:
+ * https://www.npmjs.com/package/@google/generative-ai
+ */
+
+export type ModelFactory = (apiKey: string) => GenerativeModel;
+
+export class LlmClient {
+  private apiKey?: string | null;
+  private model?: GenerativeModel;
+  //BASE URL as shown in REST-style requests from gemini's API documentation
+  private readonly createModel: ModelFactory;
+
+  constructor(factory?: ModelFactory) {
+    this.createModel = factory ?? ((key) => {
+      const genAI = new GoogleGenerativeAI(key);
+      return genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: {
+          //json output
+          responseMimeType: "application/json",
+          temperature: 0.2,
+          maxOutputTokens: 4096
+        }
+      });
+    });
+  }
+
+  static buildPrompt(input: { albumOrPlaylistName?: string | null; userContext?: GenerateThemeRequest["userContext"] }) {
+    const name = input.albumOrPlaylistName?.trim() || "Unknown";
+    const genres = input.userContext?.genres?.length ? input.userContext.genres.join(", ") : "none";
+    const extras = [`Album/Playlist="${name}"`, `Genres=${genres}`];
+    if (input.userContext?.timeOfDay) extras.push(`Time=${input.userContext.timeOfDay}`);
+    if (input.userContext?.weather) extras.push(`Weather=${input.userContext.weather}`);
+    return [
+      "You generate Chrome themes from album art.",
+      "Return strict JSON with shape:",
+      `{"theme":{"colors":{"primary":{"r":0-255,"g":0-255,"b":0-255,"a":0-1},"secondary":{...},"accent":{...},"background":{...},"foreground":{...}},"backgroundImageDataUrl":"data:image/png;base64,..."}}.`,
+      "Ensure readable contrast between foreground and background.",
+      `Context: ${extras.join("; ")}`
+    ].join("\n");
   }
 
   setApiKey(key: string) {
     this.apiKey = key;
+    this.model = undefined;
   }
 
-  setModel(model: string) {
-    this.model = model;
-  }
 
   private ensureKey(): string {
     if (!this.apiKey) throw new Error("Gemini API key not set. call setApiKey() first.");
     return this.apiKey;
   }
 
-  //non stream theme generation
-  async generateTheme(req: GenerateThemeRequest): Promise<GenerateThemeResponse> {
-    const url = `${this.base}/${this.model}:generateContent?key=${this.ensureKey()}`;
-
-    const prompt = buildPrompt(req.userContext);
-    const imagePart = req.albumArtBase64 ? toImagePart(req.albumArtBase64) : undefined;
-
-    const body = {
-      contents: [{ role: "user", parts: [{ text: prompt }, ...(imagePart ? [imagePart] : [])] }],
-      generationConfig: {
-        response_mime_type: "application/json",
-        //lower "temperature" for more deterministic output for now. can be tweaked with later.
-        temperature: 0.2,
-        maxOutputTokens: 2048,
-      },
-    };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+   static buildPromptParts(req: GenerateThemeRequest): Part[] {
+    const instructions = LlmClient.buildPrompt({
+      albumOrPlaylistName: req.albumOrPlaylistName,
+      userContext: req.userContext
     });
-
-    if (!res.ok) {
-      const err = (await res.json().catch(() => null)) as ApiError | null;
-      throw new Error(err?.message || `Gemini generateContent failed: ${res.status}`);
+    const parts: Part[] = [{ text: instructions }];
+    if (req.albumArtBase64) {
+      parts.push(LlmClient.toImagePart(req.albumArtBase64));
     }
-
-    const out = await res.json();
-    const text = extractText(out);
-    const theme = parseAndValidateTheme(text);
-    return { theme, rawModelOutput: out };
+    return parts;
   }
 
-  //streamed generation, we can process incremental updates so that we can track/change theme output 
-  //for example, if we have, a playlist with many different albums with different themes.
-  async *streamGenerateTheme(req: GenerateThemeRequest): AsyncGenerator<string> {
-    const url = `${this.base}/${this.model}:streamGenerateContent?key=${this.ensureKey()}`;
+  static toImagePart(dataUrlOrBase64: string) {
+    const hasPrefix = dataUrlOrBase64.startsWith("data:");
+    if (hasPrefix) {
+      const match = dataUrlOrBase64.match(/^data:(.+?);base64,(.*)$/);
+      const mimeType = match?.[1] ?? "image/png";
+      const data = match?.[2] ?? dataUrlOrBase64.split(",")[1] ?? "";
+      return { inlineData: { mimeType, data } };
+    }
+    return { inlineData: { mimeType: "image/png", data: dataUrlOrBase64 } };
+  }
 
-    const prompt = buildPrompt(req.userContext);
-    const imagePart = req.albumArtBase64 ? toImagePart(req.albumArtBase64) : undefined;
+  //non stream theme generation
+  async generateTheme(req: GenerateThemeRequest): Promise<{ theme: GeneratedTheme }> {
+    if (!this.apiKey) throw new Error("GEMINI_API_KEY_REQUIRED");
+    this.model ??= this.createModel(this.apiKey);
 
-    const body = {
-      contents: [{ role: "user", parts: [{ text: prompt }, ...(imagePart ? [imagePart] : [])] }],
-      generationConfig: { response_mime_type: "application/json" },
-    };
+    const parts = LlmClient.buildPromptParts(req);
+    const result = await this.model.generateContent({ contents: [{ role: "user", parts }] });
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
 
-    if (!res.ok || !res.body) {
-      const err = (await res.json().catch(() => null)) as ApiError | null;
-      throw new Error(err?.message || `Gemini streamGenerateContent failed: ${res.status}`);
+    //bug here: gemini is being stupid and always creating responses above token limit
+    //response.candidates, an array of responses by gemini
+
+    console.log("LLM raw output:", result);
+
+    const candidateText = result.response.candidates?.[0];
+    console.log("LLM candidate output:", candidateText);
+    if (!candidateText) {
+      throw new Error("No candidates returned from LLM");
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      yield decoder.decode(value, { stream: true });
-    }
+    alert("LLM raw output: \n" + JSON.stringify(result));
+
+    const json = result.response.text();
+    return JSON.parse(json) as { theme: GeneratedTheme };
   }
 }
 
 //helper functions for ease of use and easier code readability.
 
+/*
 function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: string }) {
   const ctx: string[] = [];
   if (user?.genres?.length) ctx.push(`Genres: ${user.genres.join(", ")}`);
@@ -136,6 +144,8 @@ function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: s
     ctx.length ? `Context: ${ctx.join(" | ")}` : "",
   ].filter(Boolean).join("\n");
 }
+*/
+
 
 //convert data URL to inline image data (base64 encoded)
 function toImagePart(dataUrl: string) {
