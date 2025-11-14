@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:sandbox": "vite --open /theme-sandbox.html",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

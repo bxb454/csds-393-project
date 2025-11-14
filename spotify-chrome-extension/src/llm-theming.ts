@@ -91,13 +91,19 @@ export const LLMTheming = {
       };
       
       const resp = await this.client.generateTheme(payload);
+      //parse and validate the theme response
       const theme = this.parseThemeResponse(resp);
+      //check missing fields
       validateTheme(theme);
-      
+
+      //print the actual theme
       console.log("Generated random theme:", theme);
+      console.log("rgb values:", theme.colors.primary, theme.colors.secondary, theme.colors.accent, theme.colors.background, theme.colors.foreground);
+      alert("Your LLM-generated colors are: \n" + JSON.stringify(theme.colors));
       return theme;
     } catch (e) {
       console.error("Failed to generate random theme:", e);
+      alert("Failed to generate random theme using Gemini LLM wrapper. Fallback random theme created without llm input.")
       //Fallback to hardcoded random theme if LLM fails.
       return this.getFallbackRandomTheme();
     }
@@ -206,7 +212,7 @@ export const LLMTheming = {
   },
 };
 
-//foreach loop to ensure that we don't have mismatch
+//foreach loop to ensure that we don't have mismatch (missing fields)  
 function validateTheme(theme: GeneratedTheme) {
   for (const k of ["primary","secondary","accent","background","foreground"] as const) {
     if (!theme?.colors?.[k]) throw Errors.make("THEME_INVALID", `Missing colors.${k}`);
