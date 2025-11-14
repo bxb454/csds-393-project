@@ -1,4 +1,4 @@
-import { useState} from 'react'
+import React, { useState } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import './App.css'
