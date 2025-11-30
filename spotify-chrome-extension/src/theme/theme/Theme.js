@@ -17,6 +17,9 @@ const llm_theming_1 = require("../llm-theming");
  * @property {string[]} [genres]
  */
 
+//transpiled from typescript for use in chrome extension as injection script
+//no native chrome support for typescript yet
+
 //mainly for testing purposes
 const GENRE_THEMES = {
   rock: {
