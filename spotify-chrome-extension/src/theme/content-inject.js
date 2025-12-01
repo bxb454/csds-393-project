@@ -1,6 +1,9 @@
 import { ThemeUpdater } from "./theme/theme/Theme.js";
 import { LLMTheming } from "./theme/llm-theming.js";
 
+//Nearly forgot to set the API key here
+LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY);
+
 //create a listener for messages from the extension background or popup scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "applyRandomTheme") {

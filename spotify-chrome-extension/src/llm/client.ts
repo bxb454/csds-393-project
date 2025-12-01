@@ -2,7 +2,7 @@ import type {
   GenerateThemeRequest,
   //GenerateThemeResponse,
   GeneratedTheme,
-  //ApiError,
+  ApiError,
 } from "./types";
 
 import { GoogleGenerativeAI, type GenerativeModel,
@@ -29,10 +29,9 @@ export class LlmClient {
       return genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         generationConfig: {
-          //json output
+          //MIME type so we can get JSON responses
           responseMimeType: "application/json",
-          temperature: 0.2,
-          maxOutputTokens: 4096
+          temperature: 0.5
         }
       });
     });
@@ -48,7 +47,7 @@ export class LlmClient {
       "You generate Chrome themes from album art.",
       "Return strict JSON with shape:",
       `{"theme":{"colors":{"primary":{"r":0-255,"g":0-255,"b":0-255,"a":0-1},"secondary":{...},"accent":{...},"background":{...},"foreground":{...}},"backgroundImageDataUrl":"data:image/png;base64,..."}}.`,
-      "Ensure readable contrast between foreground and background.",
+      "Ensure readable contrast between foreground and background, and make sure that if ",
       `Context: ${extras.join("; ")}`
     ].join("\n");
   }
@@ -97,6 +96,7 @@ export class LlmClient {
 
 
     //bug here: gemini is being stupid and always creating responses above token limit
+    //bug fixed by getting rid of limit altogether
     //response.candidates, an array of responses by gemini
 
     console.log("LLM raw output:", result);
@@ -107,7 +107,8 @@ export class LlmClient {
       throw new Error("No candidates returned from LLM");
     }
 
-    alert("LLM raw output: \n" + JSON.stringify(result));
+    alert(`LLM raw output based on theme ${req.userContext.genres.join(", ")} is:  \n` + JSON.stringify(result));
+    for (const candidate of result.response.candidates ?? []) console.log("LLM candidate:", candidate);
 
     const json = result.response.text();
     return JSON.parse(json) as { theme: GeneratedTheme };
@@ -149,7 +150,7 @@ function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: s
 
 /* i dont need these anymore
 //convert data URL to inline image data (base64 encoded)
-/*function toImagePart(dataUrl: string) {
+function toImagePart(dataUrl: string) {
     //regex parsing to match a typical MIME type for data representation
   const match_data = dataUrl.match(/^data:(.+?);base64,/)?.[1] ?? "image/png";
   const data = dataUrl.split(",")[1]!;
@@ -173,4 +174,4 @@ function parseAndValidateTheme(text: string) {
     if (!theme?.colors?.[k]) throw new Error(`Missing colors.${k}`);
   }
   return theme;
-}*/
+  */

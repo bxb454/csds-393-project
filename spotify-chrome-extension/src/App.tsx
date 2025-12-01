@@ -8,6 +8,7 @@ function sendThemeAction(action: "applyRandomTheme" | "applyPlaylistTheme" | "re
       setStatus("Chrome tabs API unavailable.");
       return;
     }
+    //Get the currently active tab (tabs[0]?.id)
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tabId = tabs[0]?.id;
       if (!tabId) {
