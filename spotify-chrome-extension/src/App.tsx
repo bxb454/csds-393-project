@@ -11,10 +11,47 @@ LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY);
 
 // HomePage now accepts a navigation handler (goToSettings)
 function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: string, handleLogout: () => void, goToSettings: () => void, goToLLM: () => void }) {
+  const { liveThemes } = useSettings();
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
+
+  // Helper function to apply theme from track data
+  const applyPlaylistThemeForTrack = async (trackData: any) => {
+    try {
+      console.log("[HomePage] Applying live theme for track:", trackData.name);
+      // Convert to TrackMetadata format
+      const trackMetadata: TrackMetadata = {
+        id: trackData.id,
+        name: trackData.name,
+        artists: trackData.artists.map((artist: { name: string }) => ({ name: artist.name })),
+        genres: [],
+        album: {
+          id: trackData.album.id,
+          name: trackData.album.name,
+          images: trackData.album.images
+        }
+      };
+
+      const theme = await ThemeUpdater.generateThemeFromTrack(trackMetadata);
+      console.log("[HomePage] Theme generated for live theming:", theme);
+      
+      // Apply to popup
+      ThemeUpdater.applyTheme(theme);
+      
+      // Save to Chrome storage
+      chrome.storage.local.set({ currentTheme: theme });
+      
+      // Broadcast to all tabs via background script
+      chrome.runtime.sendMessage({
+        action: "themeGenerated",
+        theme: theme
+      });
+    } catch (error) {
+      console.error("[HomePage] Error applying live theme:", error);
+    }
+  };
 
   // Function to fetch current track
   const fetchCurrentTrack = async () => {
@@ -30,6 +67,11 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
         
         const track = await getTrackDetails(token, newTrackId);
         set_track_name(track.data.name);
+
+        // If Live Theming is enabled, apply theme from the new track
+        if (liveThemes) {
+          await applyPlaylistThemeForTrack(current_track.data.item);
+        }
       }
     } catch (error) {
       console.error("Error fetching current track:", error);
@@ -46,7 +88,7 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
-  }, [token, track_id]); // Re-run if token or track_id changes
+  }, [token, track_id, liveThemes]); // Re-run if token, track_id, or liveThemes changes
 
   return (
     <div className="homepage-container">
