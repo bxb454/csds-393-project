@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import { ThemeUpdater, type TrackMetadata } from './theme/Theme'
 import { LLMTheming } from './llm-theming'
+import { SettingsProvider, useSettings } from './SettingsContext.tsx'
+import { startLiveThemePolling, stopLiveThemePolling } from './LiveThemePoller'
 import './App.css'
 
 // Initialize LLM API key
@@ -222,35 +224,35 @@ function LLMPage({ goToHome, token }: { goToHome: () => void, token: string }) {
 
 // SettingsPage now accepts a navigation handler (goToHome)
 function SettingsPage({ goToHome }: { goToHome: () => void }) {
-  const [liveThemes, setLiveThemes] = useState(false);
-  const [weatherThemes, setWeatherThemes] = useState(false);
+  const { liveThemes, setLiveThemes, randomThemes, setRandomThemes } = useSettings();
 
   return (
     <div className="homepage-container">
       <div className="top-bar">
         <button className="nav-button left" onClick={goToHome}>Accept</button>
         <button className="nav-button center">Settings</button>
-        <button className="nav-button right" onClick={goToHome}>Close</button> 
+        <button className="nav-button right" onClick={goToHome}>Close</button>
       </div>
       <div className="settings-content">
         <div className="setting-row">
           <span className="setting-label">Live Themes</span>
           <label className="toggle-switch">
-            <input 
-              type="checkbox" 
-              checked={liveThemes} 
+            <input
+              type="checkbox"
+              checked={liveThemes}
               onChange={(e) => setLiveThemes(e.target.checked)}
             />
             <span className="toggle-slider"></span>
           </label>
         </div>
+
         <div className="setting-row">
-          <span className="setting-label">Weather Themes</span>
+          <span className="setting-label">Random Themes</span>
           <label className="toggle-switch">
-            <input 
-              type="checkbox" 
-              checked={weatherThemes} 
-              onChange={(e) => setWeatherThemes(e.target.checked)}
+            <input
+              type="checkbox"
+              checked={randomThemes}
+              onChange={(e) => setRandomThemes(e.target.checked)}
             />
             <span className="toggle-slider"></span>
           </label>
@@ -271,6 +273,7 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
+  const { liveThemes } = useSettings()
   // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
   const goToLLM = () => setCurrentView('llm');
@@ -278,35 +281,36 @@ function App() {
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
 
-  if (!token) {
-    return (<div className = "App">
-      <LoginPage handleLogin={handleLogin} />
-    </div>)
-  }
-  else {
-    // Render SettingsPage if currentView is 'settings'
-    if (currentView === 'settings') {
-      return (
-        <div className="App">
+  // Start/stop live theme polling based on liveThemes setting and token availability
+  useEffect(() => {
+    if (token && liveThemes) {
+      console.log('[App] liveThemes enabled, starting polling')
+      startLiveThemePolling(token)
+      return () => {
+        console.log('[App] Cleaning up live theme polling')
+        stopLiveThemePolling()
+      }
+    } else if (!liveThemes) {
+      console.log('[App] liveThemes disabled, stopping polling')
+      stopLiveThemePolling()
+    }
+  }, [token, liveThemes])
+
+  return (
+    <SettingsProvider>
+      <div className="App">
+        {!token ? (
+          <LoginPage handleLogin={handleLogin} />
+        ) : currentView === 'settings' ? (
           <SettingsPage goToHome={goToHome} />
-        </div>
-      )
-    }
-    // Render LLMPage if currentView is 'llm'
-    if (currentView === 'llm') {
-      return (
-      <div className="App">
-        <LLMPage goToHome={goToHome} token={token} />
+        ) : currentView === 'llm' ? (
+          <LLMPage goToHome={goToHome} token={token} />
+        ) : (
+          <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} goToLLM={goToLLM} />
+        )}
       </div>
-      )
-    }
-    // Default: Render HomePage
-    return (
-      <div className="App">
-        <HomePage token={token} handleLogout={handleLogout} goToSettings={goToSettings} goToLLM={goToLLM} />
-      </div>
-    )
-  }
+    </SettingsProvider>
+  )
 }
 
 export default App
