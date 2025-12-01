@@ -10,7 +10,10 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       viteStaticCopy({
-        targets: [{ src: "public/manifest.json", dest: "." }]
+        targets: [
+          { src: "public/manifest.json", dest: "." },
+          { src: "public/content-script.js", dest: "." }
+        ]
       }) as unknown as any
     ],
     build: {
@@ -18,7 +21,16 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: "./index.html",
-          themesandbox: "./src/theme-sandbox/themeSandbox.tsx"
+          themesandbox: "./theme-sandbox.html",
+          background: "./src/background.ts"
+        },
+        output: {
+          entryFileNames: (chunkInfo) => {
+            if (chunkInfo.name === 'background') {
+              return '[name].js';
+            }
+            return 'assets/[name]-[hash].js';
+          }
         }
       }
     },
@@ -27,12 +39,11 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       coverage: {
-        //use v8 instead of istanbul as it is native with vite
         provider: "v8",
       },
       environment: "jsdom",
       globals: true,
       setupFiles: []
-    },
+    }
   };
 });

@@ -28,6 +28,8 @@ const RANDOM_THEME : GeneratedTheme = {
 //this never changes
 const SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
 
+
+//WE'RE NOT USING LOCAL STORAGE
 /*
 //helper function to get to localStorage like Auth.tsx does
 function getAccessToken(): string {
@@ -60,25 +62,96 @@ export const LLMTheming = {
 
   setApiKey(apiKey: string) { this.client.setApiKey(apiKey); },
 
+  /*Note: this might cause issues since we're just randomly generating RGB values
+  */
   getFallbackRandomTheme(): GeneratedTheme {
-    const randomColor = (): RGBA => ({
-      r: Math.floor(Math.random() * 256),
-      g: Math.floor(Math.random() * 256), 
-      b: Math.floor(Math.random() * 256),
-      a: 1
-    });
 
-    return {
-      colors: {
-        primary: randomColor(),
-        secondary: randomColor(),
-        accent: randomColor(),
-        background: randomColor(),
-        foreground: randomColor()
-      },
-      backgroundImageDataUrl: ""
-    };
-  },
+
+    //loop through all fields of what a ThemeColors object looks like so we get randomly generated
+    //RGBA values for each color. We want to explicitly avoid conflicts in color (ex: white bg and white fg) 
+
+    //Use WCAG 2.0 7:1 contrast ratio rule as a guide for this.
+    //https://www.w3.org/TR/WCAG20-TECHS/G17.html 
+
+
+    //Measure relative "luminance of a color as a 0-1 value"
+     const luminance = (color: RGBA): number => {
+    const [r, g, b] = [color.r, color.g, color.b].map(val => {
+      const sRGB = val / 255;
+      //Luminance formulas here. Just referenced the website.
+      return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  //Calculate the contrast ratio between the 2 colors (1-21)
+  const contrastRatio = (c1: RGBA, c2: RGBA): number => {
+    const l1 = luminance(c1);
+    const l2 = luminance(c2);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+
+  //and here generate the random color
+  const randomColor = (): RGBA => ({
+    r: Math.floor(Math.random() * 256),
+    g: Math.floor(Math.random() * 256),
+    b: Math.floor(Math.random() * 256),
+    a: 1
+  });
+
+  //Generate a background/foreground pair with guaranteed contrast
+  const generateContrastPair = (): { bg: RGBA; fg: RGBA } => {
+    let bg: RGBA, fg: RGBA;
+    let attempts = 0;
+    do {
+      bg = randomColor();
+      fg = randomColor();
+      attempts++;
+      //We don't have weighted randomization though so let's just keep attempting until we get it.
+      //WCAG AA standard requires 4.5:1 for normal text
+    } while (contrastRatio(bg, fg) < 4.5 && attempts < 100);
+    
+    //if that didn't work, just default to a set pair (janky)
+    if (contrastRatio(bg, fg) < 4.5) {
+      bg = { r: 18, g: 18, b: 18, a: 1 }; //Dark grey
+      fg = { r: 255, g: 255, b: 255, a: 1 }; //white
+    }
+    return { bg, fg };
+  };
+
+  //Create the primary/accent that don't conflict with background
+  const generateDistinctColor = (avoid: RGBA[]): RGBA => {
+    let color: RGBA;
+    let attempts = 0;
+    do {
+      color = randomColor();
+      attempts++;
+    } while (
+
+      avoid.some(c => contrastRatio(color, c) < 2.0) &&
+      attempts < 50
+    );
+    return color;
+  };
+
+  const { bg, fg } = generateContrastPair();
+  const primary = generateDistinctColor([bg, fg]);
+  const secondary = generateDistinctColor([bg, fg, primary]);
+  const accent = generateDistinctColor([bg, fg, primary, secondary]);
+
+  return {
+    colors: {
+      background: bg,
+      foreground: fg,
+      primary,
+      secondary,
+      accent
+    },
+    backgroundImageDataUrl: ""
+  };
+},
 
   async generateRandomTheme(): Promise<GeneratedTheme> {
     try {

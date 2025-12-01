@@ -48,20 +48,74 @@ async function getAccessToken() {
 exports.LLMTheming = {
     client: new llm_1.LlmClient(),
     setApiKey(apiKey) { this.client.setApiKey(apiKey); },
-    getFallbackRandomTheme() {
+   getFallbackRandomTheme() {
+        const luminance = (color) => {
+            const [r, g, b] = [color.r, color.g, color.b].map(val => {
+                const sRGB = val / 255;
+                return sRGB <= 0.03928 ? sRGB / 12.92 : Math.pow((sRGB + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+
+        //Calculate the contrast ratio between 2 colors (1-21)
+        const contrastRatio = (c1, c2) => {
+            const l1 = luminance(c1);
+            const l2 = luminance(c2);
+            const lighter = Math.max(l1, l2);
+            const darker = Math.min(l1, l2);
+            return (lighter + 0.05) / (darker + 0.05);
+        };
+
         const randomColor = () => ({
             r: Math.floor(Math.random() * 256),
             g: Math.floor(Math.random() * 256),
             b: Math.floor(Math.random() * 256),
             a: 1
         });
+
+        const generateContrastPair = () => {
+            let bg, fg;
+            let attempts = 0;
+            do {
+                bg = randomColor();
+                fg = randomColor();
+                attempts++;
+                //WCAG AA standard requires 4.5:1 for normal text
+            } while (contrastRatio(bg, fg) < 4.5 && attempts < 100);
+            
+            if (contrastRatio(bg, fg) < 4.5) {
+                bg = { r: 18, g: 18, b: 18, a: 1 }; //Dark grey
+                fg = { r: 255, g: 255, b: 255, a: 1 }; // white
+            }
+            
+            return { bg, fg };
+        };
+
+        const generateDistinctColor = (avoid) => {
+            let color;
+            let attempts = 0;
+            do {
+                color = randomColor();
+                attempts++;
+            } while (
+                avoid.some(c => contrastRatio(color, c) < 2.0) &&
+                attempts < 50
+            );
+            return color;
+        };
+
+        const { bg, fg } = generateContrastPair();
+        const primary = generateDistinctColor([bg, fg]);
+        const secondary = generateDistinctColor([bg, fg, primary]);
+        const accent = generateDistinctColor([bg, fg, primary, secondary]);
+
         return {
             colors: {
-                primary: randomColor(),
-                secondary: randomColor(),
-                accent: randomColor(),
-                background: randomColor(),
-                foreground: randomColor()
+                background: bg,
+                foreground: fg,
+                primary,
+                secondary,
+                accent
             },
             backgroundImageDataUrl: ""
         };

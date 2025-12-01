@@ -6,11 +6,16 @@
   "action": {
     "default_popup": "index.html"
   },
-  "permissions": ["identity", "storage"],
-  "content_scripts":[
+  "permissions": ["identity", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
     {
-      "matches":["<all_urls>"],
-      "js": ["../src/theme/content-inject.js"]
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_end"
     }
   ]
 }

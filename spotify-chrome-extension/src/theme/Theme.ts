@@ -38,6 +38,7 @@ const GENRE_THEMES: Record<string, GeneratedTheme> = {
   }
 };
 
+//This is just the fallback GeneratedTheme object but we don't really use it since it's janky
 /*const DEFAULT_THEME: GeneratedTheme = {
   colors: {
     primary: { r: 29, g: 185, b: 84, a: 1 },
@@ -49,6 +50,7 @@ const GENRE_THEMES: Record<string, GeneratedTheme> = {
   backgroundImageDataUrl: ""
 };*/
 
+//CSS variable names for theming
 const COLOR_VARS = {
     PRIMARY: "--theme-primary",
     SECONDARY: "--theme-secondary",
@@ -62,6 +64,7 @@ const BG_VAR = "--theme-bg-image";
 let savedValues: Record<string, string> | null = null;
 let savedTransition = "";
 
+//get a proper rgba() string from a color object
 function rgba({ r, g, b, a }: GeneratedTheme["colors"]["primary"]) {
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
