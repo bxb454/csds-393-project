@@ -77,11 +77,11 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
       const newTrackId = current_track.data.item.id;
       
       // Only update if track changed
-      if (newTrackId !== track_id) {
+      if (newTrackId != track_id) {
         set_track_id(newTrackId);
         set_album_art(current_track.data.item.album.images[0].url);
         set_artist_name(current_track.data.item.artists.map((artist: { name: string }) => artist.name).join(", "));
-        
+
         const track = await getTrackDetails(token, newTrackId);
         set_track_name(track.data.name);
 
