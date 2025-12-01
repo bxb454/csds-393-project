@@ -11,11 +11,28 @@ LLMTheming.setApiKey(import.meta.env.GEMINI_API_KEY);
 
 // HomePage now accepts a navigation handler (goToSettings)
 function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: string, handleLogout: () => void, goToSettings: () => void, goToLLM: () => void }) {
-  const { liveThemes } = useSettings();
+  const { liveThemes, randomThemes } = useSettings();
   const [track_id, set_track_id] = useState<string | null>(null)
   const [track_name, set_track_name] = useState<string | null>(null)
   const [artist_Name, set_artist_name] = useState<string | null>(null)
   const [album_Art, set_album_art] = useState<string | null>(null)
+
+  // Load and reapply saved theme when HomePage mounts
+  React.useEffect(() => {
+    try {
+      chrome?.storage?.local?.get(['currentTheme'], (result) => {
+        if (result?.currentTheme) {
+          console.log("[HomePage] Reapplying saved theme on mount");
+          // Use requestAnimationFrame to ensure DOM is ready
+          requestAnimationFrame(() => {
+            ThemeUpdater.applyTheme(result.currentTheme);
+          });
+        }
+      });
+    } catch (e) {
+      // chrome may be undefined in test environment
+    }
+  }, []);
 
   // Helper function to apply theme from track data
   const applyPlaylistThemeForTrack = async (trackData: any) => {
@@ -89,6 +106,18 @@ function HomePage({ token, handleLogout, goToSettings, goToLLM }: { token: strin
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [token, track_id, liveThemes]); // Re-run if token, track_id, or liveThemes changes
+
+  // Reset theme if both theming options are disabled
+  React.useEffect(() => {
+    if (!liveThemes && !randomThemes) {
+      console.log("[HomePage] Both theming options disabled, resetting theme");
+      ThemeUpdater.resetToDefault();
+      chrome.storage.local.remove('currentTheme');
+      chrome.runtime.sendMessage({
+        action: "resetTheme"
+      }).catch(() => {});
+    }
+  }, [liveThemes, randomThemes]);
 
   return (
     <div className="homepage-container">
@@ -320,6 +349,28 @@ function App() {
 
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
+
+  // Load and reapply saved theme when extension opens
+  React.useEffect(() => {
+    try {
+      chrome?.storage?.local?.get(['currentTheme'], (result) => {
+        if (result?.currentTheme) {
+          console.log("[App] Reapplying saved theme on extension open");
+          // Use requestAnimationFrame to ensure DOM is ready
+          requestAnimationFrame(() => {
+            ThemeUpdater.applyTheme(result.currentTheme);
+            // Broadcast to all tabs
+            chrome.runtime.sendMessage({
+              action: "themeGenerated",
+              theme: result.currentTheme
+            }).catch(() => {});
+          });
+        }
+      });
+    } catch (e) {
+      // chrome may be undefined in test environment
+    }
+  }, []);
 
   return (
     <SettingsProvider>
