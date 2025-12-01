@@ -2,7 +2,7 @@ import type {
   GenerateThemeRequest,
   //GenerateThemeResponse,
   GeneratedTheme,
-  ApiError,
+ // ApiError,
 } from "./types";
 
 import { GoogleGenerativeAI, type GenerativeModel,
@@ -115,63 +115,3 @@ export class LlmClient {
   }
 }
 
-//helper functions for ease of use and easier code readability.
-
-/*
-function buildPrompt(user?: { genres?: string[]; timeOfDay?: string; weather?: string }) {
-  const ctx: string[] = [];
-  if (user?.genres?.length) ctx.push(`Genres: ${user.genres.join(", ")}`);
-  if (user?.timeOfDay) ctx.push(`Time: ${user.timeOfDay}`);
-  if (user?.weather) ctx.push(`Weather: ${user.weather}`);
-
-
-  //base prompt is here, can be tweaked later on and refined.
-
-  return [
-    "You generate Chrome themes from album art.",
-    "Return strict JSON with shape:",
-    `{
-      "theme": {
-        "colors": {
-          "primary": {"r":0-255,"g":0-255,"b":0-255,"a":0-1},
-          "secondary": {"r":...},
-          "accent": {"r":...},
-          "background": {"r":...},
-          "foreground": {"r":...}
-        },
-        "backgroundImageDataUrl": "data:image/png;base64,..."
-      }
-    }`,
-    "Ensure readable contrast between foreground and background.",
-    ctx.length ? `Context: ${ctx.join(" | ")}` : "",
-  ].filter(Boolean).join("\n");
-}
-*/
-
-/* i dont need these anymore
-//convert data URL to inline image data (base64 encoded)
-function toImagePart(dataUrl: string) {
-    //regex parsing to match a typical MIME type for data representation
-  const match_data = dataUrl.match(/^data:(.+?);base64,/)?.[1] ?? "image/png";
-  const data = dataUrl.split(",")[1]!;
-  return { inlineData: { matchType: match_data, data } };
-}
-
-function extractText(out: any): string {
-  //typical: candidates[0].content.parts[].text
-  return (
-    out?.candidates?.[0]?.content?.parts?.find((p: any) => typeof p.text === "string")?.text ??
-    out?.candidates?.[0]?.output_text ??
-    ""
-  );
-}
-
-//parse theme string to get colors
-function parseAndValidateTheme(text: string) {
-  const obj = JSON.parse(text);
-  const theme = obj.theme ?? obj;
-  for (const k of ["primary", "secondary", "accent", "background", "foreground"]) {
-    if (!theme?.colors?.[k]) throw new Error(`Missing colors.${k}`);
-  }
-  return theme;
-  */

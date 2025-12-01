@@ -39,7 +39,7 @@ const GENRE_THEMES: Record<string, GeneratedTheme> = {
 };
 
 //This is just the fallback GeneratedTheme object but we don't really use it since it's janky
-const DEFAULT_THEME: GeneratedTheme = {
+/*const DEFAULT_THEME: GeneratedTheme = {
   colors: {
     primary: { r: 29, g: 185, b: 84, a: 1 },
     secondary: { r: 25, g: 20, b: 20, a: 1 },
