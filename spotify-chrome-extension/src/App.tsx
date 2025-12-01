@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from './SpotifyAuth.tsx'
 import { getCurrentlyPlayingTrack, getTrackDetails } from './SpotifyAPI.tsx'
 import { ThemeUpdater, type TrackMetadata } from './theme/Theme'
 import { LLMTheming } from './llm-theming'
 import { SettingsProvider, useSettings } from './SettingsContext.tsx'
-import { startLiveThemePolling, stopLiveThemePolling } from './LiveThemePoller'
 import './App.css'
 
 // Initialize LLM API key
@@ -273,28 +272,12 @@ function LoginPage({ handleLogin }: { handleLogin: () => void }) {
 
 function App() {
   const { token, handleLogin, handleLogout } = useAuth()
-  const { liveThemes } = useSettings()
   // Add state to control which screen is currently visible
   const [currentView, setCurrentView] = useState('home');
   const goToLLM = () => setCurrentView('llm');
 
   const goToSettings = () => setCurrentView('settings');
   const goToHome = () => setCurrentView('home');
-
-  // Start/stop live theme polling based on liveThemes setting and token availability
-  useEffect(() => {
-    if (token && liveThemes) {
-      console.log('[App] liveThemes enabled, starting polling')
-      startLiveThemePolling(token)
-      return () => {
-        console.log('[App] Cleaning up live theme polling')
-        stopLiveThemePolling()
-      }
-    } else if (!liveThemes) {
-      console.log('[App] liveThemes disabled, stopping polling')
-      stopLiveThemePolling()
-    }
-  }, [token, liveThemes])
 
   return (
     <SettingsProvider>
