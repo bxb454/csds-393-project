@@ -335,7 +335,7 @@ function SettingsPage({ goToHome }: { goToHome: () => void }) {
 function LoginPage({ handleLogin }: { handleLogin: () => void }) {
   return (
     <div>
-      <h1>Spotify Playback Info</h1>
+      <h1>Spotify Themeing Extension</h1>
       <button onClick={handleLogin}>Login with Spotify</button>
     </div>
   )
